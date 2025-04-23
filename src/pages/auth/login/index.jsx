@@ -49,8 +49,6 @@ const LoginPage = () => {
         data: {
           userName: data.userName,
           roleName: data.roleName,
-          userLocationId: data.userLocationID || 0,
-          userOutletId: data.outletID || 0,
         },
       });
       navigate(routePath.dashboard);
@@ -64,14 +62,16 @@ const LoginPage = () => {
   });
 
   const onSubmit = ({ usernameOrEmail, password }) => {
-    queryClient.invalidateQueries();
-    loginMutation.mutate({
-      userName: usernameOrEmail,
-      password,
-      roleName: "",
-      locationId: 0,
-      finYear: 0,
+    setToken({
+      accessToken: "asdfasdf",
     });
+
+    navigate(routePath.dashboard);
+    // queryClient.invalidateQueries();
+    // loginMutation.mutate({
+    //   userName: usernameOrEmail,
+    //   password,
+    // });
   };
 
   return (
