@@ -6,14 +6,18 @@ import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
-
+import { ThemeProvider, CssBaseline } from "@mui/material";
+import theme from "./theme";
 import ReactDOM from "react-dom/client";
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <Routes />
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Routes />
+      </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </StrictMode>,

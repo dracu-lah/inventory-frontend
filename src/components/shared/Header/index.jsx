@@ -24,7 +24,7 @@ const Header = () => {
   return (
     <AppBar
       position="fixed"
-      sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, borderRadius: 0 }}
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
         <Typography variant="h6" noWrap>
