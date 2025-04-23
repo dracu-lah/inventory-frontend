@@ -1,50 +1,43 @@
-import { Box, CssBaseline, Toolbar } from "@mui/material";
+import { Box, CssBaseline } from "@mui/material";
 import Header from "@/components/shared/Header";
 import Sidebar from "@/components/shared/Sidebar";
-import { Suspense } from "react";
+import { Suspense, useRef } from "react";
 import { Outlet } from "react-router";
 import PageLoader from "@/components/loaders/PageLoader";
-// import ScrollToTop from './ScrollToTop';
 import useAuthStore from "@/store/useAuthStore";
+import ScrollToTop from "./ScrollToTop";
 
 const drawerWidth = 240;
 
 const RootLayout = () => {
   const { accessToken } = useAuthStore();
+  const isAuthenticated = Boolean(accessToken);
+  const mainRef = useRef(null);
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        minHeight: "100vh",
-        flexDirection: "column",
-        bgcolor: "background.default",
-      }}
-    >
+    <Box sx={{ display: "flex", minHeight: "100vh" }}>
       <CssBaseline />
       <Header />
-
-      <Box sx={{ display: "flex", flex: 1 }}>
-        {accessToken && <Sidebar />}
-
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            height: "calc(100vh - 64px)",
-            overflow: "auto",
-            ml: accessToken ? `${drawerWidth}px` : 0,
-            p: 2,
-          }}
-        >
-          <Toolbar />
-          <Suspense fallback={<PageLoader />}>
-            <Outlet />
-          </Suspense>
-        </Box>
+      {isAuthenticated && <Sidebar drawerWidth={drawerWidth} />}
+      <Box
+        ref={mainRef}
+        component="main"
+        sx={{
+          flexGrow: 1,
+          pt: 8,
+          px: 3,
+          pb: 3,
+          width: isAuthenticated ? `calc(100% - ${drawerWidth}px)` : "100%",
+          height: "100vh",
+          overflow: "auto",
+          bgcolor: "background.default",
+        }}
+      >
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+        <ScrollToTop targetRef={mainRef} />
       </Box>
-
-      {/* <ScrollToTop /> */}
     </Box>
   );
 };

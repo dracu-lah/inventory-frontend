@@ -18,7 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <CssBaseline />
         <Routes />
       </ThemeProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   </StrictMode>,
 );

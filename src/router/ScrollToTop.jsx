@@ -1,43 +1,48 @@
 import { useState, useEffect } from "react";
-import { ChevronUp } from "lucide-react";
+import { Fab, Zoom } from "@mui/material";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 
-const ScrollToTop = () => {
+const ScrollToTop = ({ targetRef }) => {
   const [isVisible, setIsVisible] = useState(false);
 
-  const toggleVisibility = () => {
-    if (window.pageYOffset > 300) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
-  };
+  useEffect(() => {
+    const scrollTarget = targetRef.current;
+    if (!scrollTarget) return;
+
+    const handleScroll = () => {
+      setIsVisible(scrollTarget.scrollTop > 300);
+    };
+
+    scrollTarget.addEventListener("scroll", handleScroll);
+    return () => {
+      scrollTarget.removeEventListener("scroll", handleScroll);
+    };
+  }, [targetRef]);
 
   const scrollToTop = () => {
-    window.scrollTo({
+    targetRef.current?.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   };
 
-  useEffect(() => {
-    window.addEventListener("scroll", toggleVisibility);
-    return () => {
-      window.removeEventListener("scroll", toggleVisibility);
-    };
-  }, []);
-
   return (
-    <>
-      {isVisible && (
-        <button
-          onClick={scrollToTop}
-          className="hover:bg-primary-700 fixed bottom-6 right-6 z-50 rounded-full bg-primary p-2 text-white shadow-lg transition-colors duration-300"
-          aria-label="Scroll to top"
-        >
-          <ChevronUp size={24} />
-        </button>
-      )}
-    </>
+    <Zoom in={isVisible}>
+      <Fab
+        color="primary"
+        size="small"
+        aria-label="scroll back to top"
+        onClick={scrollToTop}
+        sx={{
+          position: "fixed",
+          bottom: 16,
+          right: 16,
+          zIndex: 1000,
+        }}
+      >
+        <KeyboardArrowUpIcon />
+      </Fab>
+    </Zoom>
   );
 };
 
