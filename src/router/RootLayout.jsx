@@ -1,10 +1,10 @@
 import { Outlet } from "react-router";
-import Header from "@/components/Header";
+import Header from "@/components/shared/Header";
 import { Suspense } from "react";
 import PageLoader from "@/components/loaders/PageLoader";
-import Sidebar from "@/components/SideMenu/SideBar";
 // import ScrollToTop from "./ScrollToTop";
 import useAuthStore from "@/store/useAuthStore";
+import Sidebar from "@/components/shared/Sidebar";
 
 const RootLayout = () => {
   const { accessToken } = useAuthStore();

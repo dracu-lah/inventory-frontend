@@ -1,6 +1,5 @@
 import { lazy } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
-import ErrorPage from "@/pages/error-page";
 import { privateRoutes } from "./privateRoutes";
 import { publicRoutes } from "./publicRoutes";
 import RootLayout from "../RootLayout";
@@ -8,7 +7,7 @@ import routePath from "../routePath";
 import useAuthStore from "@/store/useAuthStore";
 
 // Auth Page Import
-const LoginPage = lazy(() => import("@/pages/auth/login"));
+// const LoginPage = lazy(() => import("@/pages/auth/login"));
 
 const Routes = () => {
   const { accessToken } = useAuthStore();
@@ -17,7 +16,7 @@ const Routes = () => {
   const authRoutes = [
     {
       path: routePath.login,
-      element: <LoginPage />,
+      element: <></>,
     },
   ].map((route) => ({
     ...route,
@@ -32,7 +31,7 @@ const Routes = () => {
     [
       {
         path: "/",
-        errorElement: <ErrorPage />,
+        // errorElement: <ErrorPage />,
         element: <RootLayout />,
         children: [...publicRoutes, ...authRoutes, ...privateRoutes],
       },
