@@ -1,25 +1,10 @@
 import { useState } from "react";
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Menu,
-  MenuItem,
-} from "@mui/material";
-import AccountCircle from "@mui/icons-material/AccountCircle";
+import { AppBar, Toolbar, Typography, IconButton } from "@mui/material";
 import useAuthStore from "@/store/useAuthStore";
+import UserAuthMenu from "./UserAuthMenu";
 
 const Header = () => {
-  const { accessToken, clearToken } = useAuthStore();
-  const [anchorEl, setAnchorEl] = useState(null);
-
-  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
-  const handleLogout = () => {
-    clearToken();
-    handleMenuClose();
-  };
+  const { accessToken } = useAuthStore();
 
   return (
     <AppBar
@@ -31,27 +16,7 @@ const Header = () => {
           Inventory Management
         </Typography>
 
-        {accessToken && (
-          <>
-            <IconButton
-              color="inherit"
-              onClick={handleMenuOpen}
-              size="large"
-              edge="end"
-            >
-              <AccountCircle />
-            </IconButton>
-
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-              <MenuItem onClick={handleLogout}>Logout</MenuItem>
-            </Menu>
-          </>
-        )}
+        {accessToken && <UserAuthMenu />}
       </Toolbar>
     </AppBar>
   );
