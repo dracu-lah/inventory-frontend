@@ -19,9 +19,9 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleToggle = (key) => {
+  const handleToggle = (label) => {
     setOpenMenus((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
     );
   };
 
@@ -41,50 +41,61 @@ const Sidebar = () => {
     >
       <Toolbar />
       <List>
-        {menuConfig.map((menu) => (
-          <div key={menu.key}>
-            <ListItemButton
-              onClick={() =>
-                menu.subMenu
-                  ? handleToggle(menu.key)
-                  : navigate(menu.route || "")
-              }
-              selected={isActiveRoute(menu.route)}
-            >
-              {menu.icon && (
-                <ListItemIcon>{<menu.icon size={20} />}</ListItemIcon>
-              )}
-              <ListItemText primary={menu.label} />
-              {menu.subMenu &&
-                (openMenus.includes(menu.key) ? (
-                  <ExpandLess />
-                ) : (
-                  <ExpandMore />
-                ))}
-            </ListItemButton>
-
-            {menu.subMenu && (
-              <Collapse
-                in={openMenus.includes(menu.key)}
-                timeout="auto"
-                unmountOnExit
+        {menuConfig.map((menu) => {
+          const Icon = menu.icon;
+          return (
+            <div key={menu.label}>
+              <ListItemButton
+                onClick={() =>
+                  menu.subMenu ? handleToggle(menu.label) : navigate(menu.route)
+                }
+                selected={isActiveRoute(menu.route)}
               >
-                <List component="div" disablePadding>
-                  {menu.subMenu.map((sub) => (
-                    <ListItemButton
-                      key={sub.key}
-                      sx={{ pl: 4 }}
-                      onClick={() => navigate(sub.route || "")}
-                      selected={isActiveRoute(sub.route)}
-                    >
-                      <ListItemText primary={sub.label} />
-                    </ListItemButton>
+                {Icon && (
+                  <ListItemIcon>
+                    <Icon fontSize="small" />
+                  </ListItemIcon>
+                )}
+                <ListItemText primary={menu.label} />
+                {menu.subMenu &&
+                  (openMenus.includes(menu.label) ? (
+                    <ExpandLess />
+                  ) : (
+                    <ExpandMore />
                   ))}
-                </List>
-              </Collapse>
-            )}
-          </div>
-        ))}
+              </ListItemButton>
+
+              {menu.subMenu && (
+                <Collapse
+                  in={openMenus.includes(menu.label)}
+                  timeout="auto"
+                  unmountOnExit
+                >
+                  <List component="div" disablePadding>
+                    {menu.subMenu.map((sub) => {
+                      const SubIcon = sub.icon;
+                      return (
+                        <ListItemButton
+                          key={sub.label}
+                          sx={{ pl: 4 }}
+                          onClick={() => navigate(sub.route)}
+                          selected={isActiveRoute(sub.route)}
+                        >
+                          {SubIcon && (
+                            <ListItemIcon>
+                              <SubIcon fontSize="small" />
+                            </ListItemIcon>
+                          )}
+                          <ListItemText primary={sub.label} />
+                        </ListItemButton>
+                      );
+                    })}
+                  </List>
+                </Collapse>
+              )}
+            </div>
+          );
+        })}
       </List>
     </Drawer>
   );
