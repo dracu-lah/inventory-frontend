@@ -28,7 +28,7 @@ const Header = () => {
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
         <Typography variant="h6" noWrap>
-          My App
+          Inventory Management
         </Typography>
 
         {accessToken && (

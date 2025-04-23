@@ -7,7 +7,7 @@ import routePath from "../routePath";
 import useAuthStore from "@/store/useAuthStore";
 
 // Auth Page Import
-// const LoginPage = lazy(() => import("@/pages/auth/login"));
+const LoginPage = lazy(() => import("@/pages/auth/login"));
 
 const Routes = () => {
   const { accessToken } = useAuthStore();
@@ -16,7 +16,7 @@ const Routes = () => {
   const authRoutes = [
     {
       path: routePath.login,
-      element: <></>,
+      element: <LoginPage />,
     },
   ].map((route) => ({
     ...route,

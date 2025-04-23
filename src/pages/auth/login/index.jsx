@@ -1,22 +1,25 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import routePath from "@/router/routePath";
-import { LoginAPI } from "@/services/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, LoaderIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
-import { Label } from "@/components/ui/label";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardActions,
+  Typography,
+  TextField,
+  Button,
+  InputAdornment,
+  IconButton,
+  Box,
+  CircularProgress,
+} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { LoginAPI } from "@/services/api";
+import routePath from "@/router/routePath";
 import useAuthStore from "@/store/useAuthStore";
-import { isTesting } from "@/utils/constants";
+
 const LoginPage = () => {
   const { setToken } = useAuthStore();
   const queryClient = useQueryClient();
@@ -24,9 +27,10 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const defaultValues = {
-    usernameOrEmail: isTesting ? "admin01" : "",
-    password: isTesting ? "corporate321" : "",
+    usernameOrEmail: "admin01",
+    password: "corporate321",
   };
+
   const {
     register,
     handleSubmit,
@@ -35,6 +39,7 @@ const LoginPage = () => {
   } = useForm({
     defaultValues,
   });
+
   const loginMutation = useMutation({
     mutationFn: LoginAPI,
     onSuccess: ({ data }) => {
@@ -57,6 +62,7 @@ const LoginPage = () => {
       });
     },
   });
+
   const onSubmit = ({ usernameOrEmail, password }) => {
     queryClient.invalidateQueries();
     loginMutation.mutate({
@@ -67,67 +73,85 @@ const LoginPage = () => {
       finYear: 0,
     });
   };
+
   return (
-    <Card className="m-auto my-40 w-[350px]">
-      <CardHeader>
-        <CardTitle>Login</CardTitle>
-      </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent>
-          <div className="grid w-full items-center gap-4">
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="name">Username / Email</Label>
-              <Input
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      minHeight="80vh"
+    >
+      <Card sx={{ width: 350, boxShadow: 3 }}>
+        <CardHeader
+          title={
+            <Typography variant="h5" component="div">
+              Login
+            </Typography>
+          }
+        />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent>
+            <Box display="flex" flexDirection="column" gap={3}>
+              <TextField
+                fullWidth
                 id="email"
-                type="text"
+                label="Username / Email"
+                variant="outlined"
+                error={!!errors.usernameOrEmail}
+                helperText={errors.usernameOrEmail?.message}
                 {...register("usernameOrEmail", { required: true })}
               />
-              {errors.usernameOrEmail && (
-                <span className="form-error">
-                  {errors.usernameOrEmail.message}
-                </span>
+
+              <TextField
+                fullWidth
+                id="password"
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                variant="outlined"
+                error={!!errors.password}
+                helperText={errors.password?.message}
+                {...register("password", { required: true })}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              {errors.root && (
+                <Typography color="error" variant="body2">
+                  {errors.root.serverError.message}
+                </Typography>
               )}
-            </div>
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="framework">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="* * * * * *"
-                  {...register("password", { required: true })}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="absolute right-0 top-0"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                >
-                  {showPassword ? <EyeOff /> : <Eye />}
-                </Button>
-                {errors.password && (
-                  <span className="form-error">{errors.password.message}</span>
-                )}
-                {errors.root && (
-                  <span className="form-error">
-                    {errors.root.serverError.message}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full mt-4" type="submit">
-            {loginMutation.isPending ? (
-              <LoaderIcon className="animate-spin" />
-            ) : (
-              "Login"
-            )}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+            </Box>
+          </CardContent>
+
+          <CardActions sx={{ padding: 2, paddingTop: 0 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={loginMutation.isPending}
+              startIcon={
+                loginMutation.isPending ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : null
+              }
+            >
+              {loginMutation.isPending ? "Loading..." : "Login"}
+            </Button>
+          </CardActions>
+        </form>
+      </Card>
+    </Box>
   );
 };
 
