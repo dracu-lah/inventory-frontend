@@ -6,6 +6,7 @@ import { Outlet } from "react-router";
 import PageLoader from "@/components/loaders/PageLoader";
 import useAuthStore from "@/store/useAuthStore";
 import ScrollToTop from "./ScrollToTop";
+import { ToastProvider } from "@/context/ToastContext";
 
 const drawerWidth = 240;
 
@@ -15,30 +16,31 @@ const RootLayout = () => {
   const mainRef = useRef(null);
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <CssBaseline />
-      <Header />
-      {isAuthenticated && <Sidebar drawerWidth={drawerWidth} />}
-      <Box
-        ref={mainRef}
-        component="main"
-        sx={{
-          flexGrow: 1,
-          pt: 8,
-          px: 3,
-          pb: 3,
-          width: isAuthenticated ? `calc(100% - ${drawerWidth}px)` : "100%",
-          height: "100vh",
-          overflow: "auto",
-          bgcolor: "background.default",
-        }}
-      >
-        <Suspense fallback={<PageLoader />}>
-          <Outlet />
-        </Suspense>
-        <ScrollToTop targetRef={mainRef} />
+    <ToastProvider>
+      <Box sx={{ display: "flex", minHeight: "100vh" }}>
+        <Header />
+        {isAuthenticated && <Sidebar drawerWidth={drawerWidth} />}
+        <Box
+          ref={mainRef}
+          component="main"
+          sx={{
+            flexGrow: 1,
+            pt: 8,
+            px: 3,
+            pb: 3,
+            width: isAuthenticated ? `calc(100% - ${drawerWidth}px)` : "100%",
+            height: "100vh",
+            overflow: "auto",
+            bgcolor: "background.default",
+          }}
+        >
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
+          <ScrollToTop targetRef={mainRef} />
+        </Box>
       </Box>
-    </Box>
+    </ToastProvider>
   );
 };
 

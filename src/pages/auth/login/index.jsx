@@ -19,16 +19,18 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { LoginAPI } from "@/services/api";
 import routePath from "@/router/routePath";
 import useAuthStore from "@/store/useAuthStore";
+import { useToast } from "@/context/ToastContext";
 
 const LoginPage = () => {
+  const { showToast } = useToast();
   const { setToken } = useAuthStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
 
   const defaultValues = {
-    usernameOrEmail: "admin01",
-    password: "corporate321",
+    usernameOrEmail: "admin",
+    password: "admin123",
   };
 
   const {
@@ -43,6 +45,7 @@ const LoginPage = () => {
   const loginMutation = useMutation({
     mutationFn: LoginAPI,
     onSuccess: ({ data }) => {
+      console.log("data", data);
       setToken({
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
@@ -53,7 +56,9 @@ const LoginPage = () => {
       });
       navigate(routePath.dashboard);
     },
-    onError: ({ response }) => {
+    onError: (response) => {
+      console.log("response", response);
+      showToast(response.message, "danger");
       setError("root.serverError", {
         type: response.status,
         message: response.data.message,
@@ -62,16 +67,17 @@ const LoginPage = () => {
   });
 
   const onSubmit = ({ usernameOrEmail, password }) => {
-    setToken({
-      accessToken: "asdfasdf",
-    });
-
-    navigate(routePath.dashboard);
-    // queryClient.invalidateQueries();
-    // loginMutation.mutate({
-    //   userName: usernameOrEmail,
-    //   password,
+    // setToken({
+    //   accessToken: "asdfasdf",
     // });
+
+    // navigate(routePath.dashboard);
+    //
+    queryClient.invalidateQueries();
+    loginMutation.mutate({
+      username: usernameOrEmail,
+      password,
+    });
   };
 
   return (

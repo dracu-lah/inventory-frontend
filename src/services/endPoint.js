@@ -1,6 +1,8 @@
 export default {
   // ========================= Auth APIS =========================
-  login: "/api/User/Account/SignIn",
+  login: "/api/auth/login",
+  logout: "/api/auth/logout",
+  refresh: "/api/auth/refresh-token",
 
   // ========================= DASHBOARD APIS =========================
   getDashboardData: "/api/Admin/Reports/GetDashboardDisplayData",
