@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,7 +17,9 @@ import {
   TableRow,
   Paper,
   InputAdornment,
+  IconButton,
 } from "@mui/material";
+import { Edit, Delete, Check, Close } from "@mui/icons-material";
 import AsyncSelect from "react-select/async";
 import { useDebouncedCallback } from "use-debounce";
 
@@ -55,6 +57,7 @@ const dummyItems = [
   },
 ];
 
+// Schemas
 const itemSchema = z.object({
   itemId: z.number().min(1, "Select an item"),
   itemCode: z.string().min(1),
@@ -77,25 +80,25 @@ const formSchema = z.object({
   roundOffAmount: z.number().optional(),
 });
 
+const defaultItemValues = {
+  itemId: 0,
+  itemCode: "",
+  itemName: "",
+  quantity: 1,
+  unitPrice: 0,
+  discountType: "PERCENTAGE",
+  discountValue: 0,
+  cgstRate: 0,
+  sgstRate: 0,
+  igstRate: 0,
+  cessRate: 0,
+};
+
 const defaultValues = {
   customerName: "",
   orderDate: new Date().toISOString().split("T")[0],
   paymentMethod: "CASH",
-  items: [
-    {
-      itemId: 0,
-      itemCode: "",
-      itemName: "",
-      quantity: 1,
-      unitPrice: 0,
-      discountType: "PERCENTAGE",
-      discountValue: 0,
-      cgstRate: 0,
-      sgstRate: 0,
-      igstRate: 0,
-      cessRate: 0,
-    },
-  ],
+  items: [],
   roundOffAmount: 0,
 };
 
@@ -113,10 +116,12 @@ export default function CreateCounterSales() {
     mode: "onChange",
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: "items" });
+  const { fields, append, update, remove } = useFieldArray({
+    control,
+    name: "items",
+  });
   const items = watch("items");
   const roundOffAmount = watch("roundOffAmount") || 0;
-
   const [calculations, setCalculations] = useState({
     subtotal: 0,
     totalDiscount: 0,
@@ -128,6 +133,8 @@ export default function CreateCounterSales() {
     totalTax: 0,
     grandTotal: 0,
   });
+  const [newItem, setNewItem] = useState(defaultItemValues);
+  const inputRefs = useRef([]);
 
   // Calculate totals for each item
   const calculateItemTotals = (item) => {
@@ -137,7 +144,6 @@ export default function CreateCounterSales() {
         ? (lineTotal * item.discountValue) / 100
         : item.discountValue;
     const taxableAmount = Math.max(lineTotal - discount, 0);
-
     return {
       lineTotal,
       discount,
@@ -149,7 +155,7 @@ export default function CreateCounterSales() {
     };
   };
 
-  // Debounced update for totals calculation
+  // Debounced update for totals
   const debouncedUpdate = useDebouncedCallback(() => {
     let subtotal = 0;
     let totalDiscount = 0;
@@ -191,7 +197,7 @@ export default function CreateCounterSales() {
     debouncedUpdate();
   }, [items, roundOffAmount, debouncedUpdate]);
 
-  // Async load items for select dropdown
+  // Async load items for add
   const loadItems = (inputValue) => {
     return new Promise((resolve) => {
       const filtered = dummyItems
@@ -209,49 +215,94 @@ export default function CreateCounterSales() {
     });
   };
 
-  // Handle item selection change
-  const handleItemChange = (selected, index) => {
+  // Handle item selection for add
+  const handleItemChange = (selected) => {
     if (selected) {
       const itemData = selected.data;
-      setValue(
-        `items.${index}`,
-        {
-          ...items[index],
-          itemId: itemData.id,
-          itemCode: itemData.code,
-          itemName: itemData.name,
-          unitPrice: itemData.price,
-          cgstRate: itemData.cgst,
-          sgstRate: itemData.sgst,
-          igstRate: itemData.igst,
-          cessRate: itemData.cess,
-          quantity: items[index].quantity || 1,
-          discountType: items[index].discountType || "PERCENTAGE",
-          discountValue: items[index].discountValue || 0,
-        },
-        { shouldValidate: true, shouldDirty: true },
-      );
+      setNewItem({
+        ...newItem,
+        itemId: itemData.id,
+        itemCode: itemData.code,
+        itemName: itemData.name,
+        unitPrice: itemData.price,
+        cgstRate: itemData.cgst,
+        sgstRate: itemData.sgst,
+        igstRate: itemData.igst,
+        cessRate: itemData.cess,
+      });
+    } else {
+      setNewItem({
+        ...defaultItemValues,
+        quantity: newItem.quantity,
+        discountType: newItem.discountType,
+        discountValue: newItem.discountValue,
+      });
     }
   };
 
-  // Handle manual update of item fields (quantity, price, discount, etc.)
-  const handleFieldChange = (index, field, value) => {
+  // Add new item
+  const handleAddItem = () => {
+    if (newItem.itemId === 0) return;
+    append(newItem);
+    setNewItem(defaultItemValues);
+    inputRefs.current[3]?.focus();
+  };
+
+  // Debounced field update for direct editing
+  const debouncedFieldUpdate = useDebouncedCallback((index, field, value) => {
     const updatedItem = { ...items[index], [field]: value };
-    setValue(`items.${index}`, updatedItem, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
+    update(index, updatedItem);
+  }, 300);
+
+  // Handle Enter key navigation
+  const handleKeyDown = (e, index, rowIndex = null) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const nextIndex = index + 1;
+      if (nextIndex < inputRefs.current.length) {
+        inputRefs.current[nextIndex]?.focus();
+      }
+      if (index === 7 && newItem.itemId !== 0) {
+        handleAddItem();
+      }
+    }
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit(console.log)} p={4}>
-      <Typography variant="h5" mb={4}>
-        Counter Sale Invoice
+    <Box
+      sx={{
+        padding: { xs: "8px", sm: "16px" },
+        maxWidth: "1200px",
+        margin: "auto",
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
+        fontFamily: "monospace",
+      }}
+    >
+      <Typography
+        variant="h6"
+        sx={{
+          marginBottom: "16px",
+          color: "#333",
+          borderBottom: "2px solid #ccc",
+          paddingBottom: "4px",
+        }}
+      >
+        Counter Sale Voucher
       </Typography>
 
       {/* Customer Details */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}>
+      <Grid
+        container
+        spacing={1}
+        sx={{
+          marginBottom: "16px",
+          backgroundColor: "#fff",
+          padding: "12px",
+          border: "1px solid #ccc",
+        }}
+      >
+        <Grid item xs={12} sm={4}>
           <TextField
             {...register("customerName")}
             label="Customer Name"
@@ -259,9 +310,14 @@ export default function CreateCounterSales() {
             required
             error={!!errors.customerName}
             helperText={errors.customerName?.message}
+            inputRef={(el) => (inputRefs.current[0] = el)}
+            onKeyDown={(e) => handleKeyDown(e, 0)}
+            size="small"
+            variant="outlined"
+            sx={{ backgroundColor: "#fff" }}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={4}>
           <TextField
             {...register("orderDate")}
             label="Date"
@@ -269,15 +325,25 @@ export default function CreateCounterSales() {
             fullWidth
             required
             InputLabelProps={{ shrink: true }}
+            inputRef={(el) => (inputRefs.current[1] = el)}
+            onKeyDown={(e) => handleKeyDown(e, 1)}
+            size="small"
+            variant="outlined"
+            sx={{ backgroundColor: "#fff" }}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={4}>
           <TextField
             {...register("paymentMethod")}
             select
             label="Payment Mode"
             fullWidth
             required
+            inputRef={(el) => (inputRefs.current[2] = el)}
+            onKeyDown={(e) => handleKeyDown(e, 2)}
+            size="small"
+            variant="outlined"
+            sx={{ backgroundColor: "#fff" }}
           >
             <MenuItem value="CASH">Cash</MenuItem>
             <MenuItem value="CARD">Card</MenuItem>
@@ -287,87 +353,234 @@ export default function CreateCounterSales() {
       </Grid>
 
       {/* Items Table */}
-      <TableContainer component={Paper} sx={{ mb: 2 }}>
-        <Table size="small" stickyHeader>
+      <TableContainer
+        component={Paper}
+        sx={{ marginBottom: "16px", border: "1px solid #ccc" }}
+      >
+        <Table size="small" sx={{ backgroundColor: "#fff" }}>
           <TableHead>
-            <TableRow>
-              <TableCell sx={{ minWidth: 250 }}>Item</TableCell>
-              <TableCell align="right" sx={{ minWidth: 100 }}>
+            <TableRow sx={{ backgroundColor: "#e0e0e0" }}>
+              <TableCell
+                sx={{
+                  minWidth: { xs: "120px", sm: "200px" },
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                Item
+              </TableCell>
+              <TableCell
+                align="right"
+                sx={{ minWidth: "80px", fontWeight: "bold", color: "#333" }}
+              >
                 Price (₹)
               </TableCell>
-              <TableCell align="right" sx={{ minWidth: 80 }}>
+              <TableCell
+                align="right"
+                sx={{ minWidth: "60px", fontWeight: "bold", color: "#333" }}
+              >
                 Qty
               </TableCell>
-              <TableCell align="center" sx={{ minWidth: 140 }}>
+              <TableCell
+                align="center"
+                sx={{ minWidth: "100px", fontWeight: "bold", color: "#333" }}
+              >
                 Discount
               </TableCell>
-              <TableCell align="right" sx={{ minWidth: 100 }}>
+              <TableCell
+                align="right"
+                sx={{ minWidth: "80px", fontWeight: "bold", color: "#333" }}
+              >
                 Taxable (₹)
               </TableCell>
-              <TableCell align="right" sx={{ minWidth: 80 }}>
+              <TableCell
+                align="right"
+                sx={{ minWidth: "60px", fontWeight: "bold", color: "#333" }}
+              >
                 CGST (₹)
               </TableCell>
-              <TableCell align="right" sx={{ minWidth: 80 }}>
+              <TableCell
+                align="right"
+                sx={{ minWidth: "60px", fontWeight: "bold", color: "#333" }}
+              >
                 SGST (₹)
               </TableCell>
-              <TableCell align="right" sx={{ minWidth: 100 }}>
+              <TableCell
+                align="right"
+                sx={{ minWidth: "80px", fontWeight: "bold", color: "#333" }}
+              >
                 Total (₹)
               </TableCell>
-              <TableCell align="center" sx={{ minWidth: 50 }}>
-                &nbsp;
+              <TableCell
+                align="center"
+                sx={{ minWidth: "80px", fontWeight: "bold", color: "#333" }}
+              >
+                Actions
               </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
+            {/* Add Item Row */}
+            <TableRow sx={{ backgroundColor: "#f0f0f0" }}>
+              <TableCell>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={loadItems}
+                  onChange={handleItemChange}
+                  value={
+                    newItem.itemId
+                      ? {
+                          value: newItem.itemId,
+                          label: `${newItem.itemCode} - ${newItem.itemName}`,
+                        }
+                      : null
+                  }
+                  placeholder="Select item..."
+                  styles={{
+                    menu: (base) => ({ ...base, zIndex: 9999 }),
+                    control: (base) => ({
+                      ...base,
+                      fontSize: "14px",
+                      borderColor: "#ccc",
+                    }),
+                  }}
+                  isClearable
+                  ref={(el) => (inputRefs.current[3] = el?.inputRef)}
+                  onKeyDown={(e) => handleKeyDown(e, 3)}
+                />
+              </TableCell>
+              <TableCell align="right">
+                <TextField
+                  size="small"
+                  type="number"
+                  value={newItem.unitPrice}
+                  onChange={(e) =>
+                    setNewItem({
+                      ...newItem,
+                      unitPrice: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">₹</InputAdornment>
+                    ),
+                  }}
+                  inputProps={{
+                    min: 0,
+                    step: "any",
+                    style: { textAlign: "right" },
+                  }}
+                  variant="outlined"
+                  sx={{ backgroundColor: "#fff", width: "80px" }}
+                  inputRef={(el) => (inputRefs.current[4] = el)}
+                  onKeyDown={(e) => handleKeyDown(e, 4)}
+                />
+              </TableCell>
+              <TableCell align="right">
+                <TextField
+                  size="small"
+                  type="number"
+                  value={newItem.quantity}
+                  onChange={(e) =>
+                    setNewItem({
+                      ...newItem,
+                      quantity: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  inputProps={{
+                    min: 1,
+                    step: 1,
+                    style: { textAlign: "right" },
+                  }}
+                  variant="outlined"
+                  sx={{ backgroundColor: "#fff", width: "60px" }}
+                  inputRef={(el) => (inputRefs.current[5] = el)}
+                  onKeyDown={(e) => handleKeyDown(e, 5)}
+                />
+              </TableCell>
+              <TableCell align="center">
+                <Grid container spacing={1}>
+                  <Grid item xs={5}>
+                    <TextField
+                      select
+                      size="small"
+                      value={newItem.discountType}
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, discountType: e.target.value })
+                      }
+                      variant="outlined"
+                      sx={{ backgroundColor: "#fff", width: "100%" }}
+                      inputRef={(el) => (inputRefs.current[6] = el)}
+                      onKeyDown={(e) => handleKeyDown(e, 6)}
+                    >
+                      <MenuItem value="PERCENTAGE">%</MenuItem>
+                      <MenuItem value="AMOUNT">₹</MenuItem>
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={7}>
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={newItem.discountValue}
+                      onChange={(e) =>
+                        setNewItem({
+                          ...newItem,
+                          discountValue: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      inputProps={{
+                        min: 0,
+                        step: "any",
+                        style: { textAlign: "right" },
+                      }}
+                      variant="outlined"
+                      sx={{ backgroundColor: "#fff", width: "100%" }}
+                      inputRef={(el) => (inputRefs.current[7] = el)}
+                      onKeyDown={(e) => handleKeyDown(e, 7)}
+                    />
+                  </Grid>
+                </Grid>
+              </TableCell>
+              <TableCell align="right">-</TableCell>
+              <TableCell align="right">-</TableCell>
+              <TableCell align="right">-</TableCell>
+              <TableCell align="right">-</TableCell>
+              <TableCell align="center">
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleAddItem}
+                  disabled={newItem.itemId === 0}
+                  sx={{
+                    backgroundColor: "#1976d2",
+                    "&:hover": { backgroundColor: "#115293" },
+                  }}
+                >
+                  Add
+                </Button>
+              </TableCell>
+            </TableRow>
+
+            {/* Existing Items */}
             {fields.map((item, index) => {
               const totals = calculateItemTotals(items[index]);
+              const baseRefIndex = 8 + index * 4; // Each row has 4 editable fields: quantity, unitPrice, discountType, discountValue
               return (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <Controller
-                      name={`items.${index}.itemCode`}
-                      control={control}
-                      render={() => (
-                        <AsyncSelect
-                          cacheOptions
-                          defaultOptions
-                          loadOptions={loadItems}
-                          onChange={(selected) =>
-                            handleItemChange(selected, index)
-                          }
-                          value={
-                            items[index].itemId
-                              ? {
-                                  value: items[index].itemId,
-                                  label: `${items[index].itemCode} - ${items[index].itemName}`,
-                                }
-                              : null
-                          }
-                          placeholder="Select item..."
-                          styles={{
-                            container: (base) => ({ ...base, width: 250 }),
-                            menu: (base) => ({ ...base, zIndex: 9999 }),
-                          }}
-                          isClearable
-                        />
-                      )}
-                    />
-                    {/* Show validation error if item not selected */}
-                    {errors.items?.[index]?.itemId && (
-                      <Typography color="error" variant="caption">
-                        {errors.items[index].itemId.message}
-                      </Typography>
-                    )}
-                  </TableCell>
-
+                <TableRow
+                  key={item.id}
+                  sx={{ backgroundColor: index % 2 === 0 ? "#fff" : "#fafafa" }}
+                >
+                  <TableCell
+                    sx={{ color: "#333" }}
+                  >{`${items[index].itemCode} - ${items[index].itemName}`}</TableCell>
                   <TableCell align="right">
                     <TextField
                       size="small"
                       type="number"
-                      inputProps={{ min: 0, step: "any" }}
                       value={items[index].unitPrice}
                       onChange={(e) =>
-                        handleFieldChange(
+                        debouncedFieldUpdate(
                           index,
                           "unitPrice",
                           parseFloat(e.target.value) || 0,
@@ -378,45 +591,66 @@ export default function CreateCounterSales() {
                           <InputAdornment position="start">₹</InputAdornment>
                         ),
                       }}
+                      inputProps={{
+                        min: 0,
+                        step: "any",
+                        style: { textAlign: "right" },
+                      }}
+                      variant="outlined"
+                      sx={{ backgroundColor: "#fff", width: "80px" }}
+                      inputRef={(el) => (inputRefs.current[baseRefIndex] = el)}
+                      onKeyDown={(e) => handleKeyDown(e, baseRefIndex, index)}
                     />
                   </TableCell>
-
                   <TableCell align="right">
                     <TextField
                       size="small"
                       type="number"
-                      inputProps={{ min: 1, step: 1 }}
                       value={items[index].quantity}
                       onChange={(e) =>
-                        handleFieldChange(
+                        debouncedFieldUpdate(
                           index,
                           "quantity",
                           parseInt(e.target.value) || 1,
                         )
                       }
+                      inputProps={{
+                        min: 1,
+                        step: 1,
+                        style: { textAlign: "right" },
+                      }}
+                      variant="outlined"
+                      sx={{ backgroundColor: "#fff", width: "60px" }}
+                      inputRef={(el) =>
+                        (inputRefs.current[baseRefIndex + 1] = el)
+                      }
+                      onKeyDown={(e) =>
+                        handleKeyDown(e, baseRefIndex + 1, index)
+                      }
                     />
                   </TableCell>
-
                   <TableCell align="center">
-                    <Grid
-                      container
-                      spacing={1}
-                      justifyContent="center"
-                      alignItems="center"
-                    >
+                    <Grid container spacing={1}>
                       <Grid item xs={5}>
                         <TextField
                           select
                           size="small"
                           value={items[index].discountType}
                           onChange={(e) =>
-                            handleFieldChange(
+                            debouncedFieldUpdate(
                               index,
                               "discountType",
                               e.target.value,
                             )
                           }
-                          fullWidth
+                          variant="outlined"
+                          sx={{ backgroundColor: "#fff", width: "100%" }}
+                          inputRef={(el) =>
+                            (inputRefs.current[baseRefIndex + 2] = el)
+                          }
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, baseRefIndex + 2, index)
+                          }
                         >
                           <MenuItem value="PERCENTAGE">%</MenuItem>
                           <MenuItem value="AMOUNT">₹</MenuItem>
@@ -426,42 +660,49 @@ export default function CreateCounterSales() {
                         <TextField
                           size="small"
                           type="number"
-                          inputProps={{ min: 0, step: "any" }}
                           value={items[index].discountValue}
                           onChange={(e) =>
-                            handleFieldChange(
+                            debouncedFieldUpdate(
                               index,
                               "discountValue",
                               parseFloat(e.target.value) || 0,
                             )
                           }
-                          fullWidth
+                          inputProps={{
+                            min: 0,
+                            step: "any",
+                            style: { textAlign: "right" },
+                          }}
+                          variant="outlined"
+                          sx={{ backgroundColor: "#fff", width: "100%" }}
+                          inputRef={(el) =>
+                            (inputRefs.current[baseRefIndex + 3] = el)
+                          }
+                          onKeyDown={(e) =>
+                            handleKeyDown(e, baseRefIndex + 3, index)
+                          }
                         />
                       </Grid>
                     </Grid>
                   </TableCell>
-
-                  <TableCell align="right">
+                  <TableCell align="right" sx={{ color: "#333" }}>
                     {totals.taxableAmount.toFixed(2)}
                   </TableCell>
-                  <TableCell align="right">{totals.cgst.toFixed(2)}</TableCell>
-                  <TableCell align="right">{totals.sgst.toFixed(2)}</TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" sx={{ color: "#333" }}>
+                    {totals.cgst.toFixed(2)}
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: "#333" }}>
+                    {totals.sgst.toFixed(2)}
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: "#333" }}>
                     {(totals.taxableAmount + totals.cgst + totals.sgst).toFixed(
                       2,
                     )}
                   </TableCell>
-
                   <TableCell align="center">
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={() => remove(index)}
-                      sx={{ minWidth: 32 }}
-                      aria-label="Remove item"
-                    >
-                      ×
-                    </Button>
+                    <IconButton size="small" onClick={() => remove(index)}>
+                      <Delete sx={{ color: "#d32f2f", fontSize: "18px" }} />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               );
@@ -470,75 +711,86 @@ export default function CreateCounterSales() {
         </Table>
       </TableContainer>
 
-      <Button
-        onClick={() => append(defaultValues.items[0])}
-        variant="outlined"
-        sx={{ mb: 4 }}
-      >
-        + Add Item
-      </Button>
-
       {/* Totals Section */}
       <Grid
         container
-        spacing={2}
-        justifyContent="flex-end"
-        sx={{ maxWidth: 400, ml: "auto" }}
+        spacing={1}
+        sx={{
+          maxWidth: "400px",
+          marginLeft: "auto",
+          backgroundColor: "#fff",
+          padding: "12px",
+          border: "1px solid #ccc",
+        }}
       >
         <Grid item xs={6}>
-          <Typography>Subtotal:</Typography>
+          <Typography sx={{ color: "#333" }}>Subtotal:</Typography>
         </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography>₹{calculations.subtotal.toFixed(2)}</Typography>
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#333" }}>
+            ₹{calculations.subtotal.toFixed(2)}
+          </Typography>
         </Grid>
         <Grid item xs={6}>
-          <Typography>Discounts:</Typography>
+          <Typography sx={{ color: "#333" }}>Discounts:</Typography>
         </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography color="error">
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#d32f2f" }}>
             -₹{calculations.totalDiscount.toFixed(2)}
           </Typography>
         </Grid>
         <Grid item xs={6}>
-          <Typography>Taxable Amount:</Typography>
+          <Typography sx={{ color: "#333" }}>Taxable Amount:</Typography>
         </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography>₹{calculations.totalTaxableAmount.toFixed(2)}</Typography>
-        </Grid>
-        <Grid item xs={6}>
-          <Typography>CGST:</Typography>
-        </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography>₹{calculations.totalCgst.toFixed(2)}</Typography>
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#333" }}>
+            ₹{calculations.totalTaxableAmount.toFixed(2)}
+          </Typography>
         </Grid>
         <Grid item xs={6}>
-          <Typography>SGST:</Typography>
+          <Typography sx={{ color: "#333" }}>CGST:</Typography>
         </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography>₹{calculations.totalSgst.toFixed(2)}</Typography>
-        </Grid>
-        <Grid item xs={6}>
-          <Typography>IGST:</Typography>
-        </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography>₹{calculations.totalIgst.toFixed(2)}</Typography>
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#333" }}>
+            ₹{calculations.totalCgst.toFixed(2)}
+          </Typography>
         </Grid>
         <Grid item xs={6}>
-          <Typography>Cess:</Typography>
+          <Typography sx={{ color: "#333" }}>SGST:</Typography>
         </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography>₹{calculations.totalCess.toFixed(2)}</Typography>
-        </Grid>
-        <Grid item xs={6}>
-          <Typography>Total Tax:</Typography>
-        </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography>₹{calculations.totalTax.toFixed(2)}</Typography>
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#333" }}>
+            ₹{calculations.totalSgst.toFixed(2)}
+          </Typography>
         </Grid>
         <Grid item xs={6}>
-          <Typography>Round Off:</Typography>
+          <Typography sx={{ color: "#333" }}>IGST:</Typography>
         </Grid>
-        <Grid item xs={6} textAlign="right">
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#333" }}>
+            ₹{calculations.totalIgst.toFixed(2)}
+          </Typography>
+        </Grid>
+        <Grid item xs={6}>
+          <Typography sx={{ color: "#333" }}>Cess:</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#333" }}>
+            ₹{calculations.totalCess.toFixed(2)}
+          </Typography>
+        </Grid>
+        <Grid item xs={6}>
+          <Typography sx={{ color: "#333" }}>Total Tax:</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography sx={{ color: "#333" }}>
+            ₹{calculations.totalTax.toFixed(2)}
+          </Typography>
+        </Grid>
+        <Grid item xs={6}>
+          <Typography sx={{ color: "#333" }}>Round Off:</Typography>
+        </Grid>
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
           <TextField
             size="small"
             type="number"
@@ -554,22 +806,42 @@ export default function CreateCounterSales() {
                 <InputAdornment position="start">₹</InputAdornment>
               ),
             }}
-            sx={{ width: 120 }}
+            inputProps={{ style: { textAlign: "right" } }}
+            variant="outlined"
+            sx={{ backgroundColor: "#fff", width: "100px" }}
+            inputRef={(el) => (inputRefs.current[8 + fields.length * 4] = el)}
+            onKeyDown={(e) => handleKeyDown(e, 8 + fields.length * 4)}
           />
         </Grid>
         <Grid item xs={6}>
-          <Typography variant="h6">Grand Total:</Typography>
+          <Typography
+            variant="subtitle1"
+            sx={{ color: "#333", fontWeight: "bold" }}
+          >
+            Grand Total:
+          </Typography>
         </Grid>
-        <Grid item xs={6} textAlign="right">
-          <Typography variant="h6" color="primary">
+        <Grid item xs={6} sx={{ textAlign: "right" }}>
+          <Typography
+            variant="subtitle1"
+            sx={{ color: "#1976d2", fontWeight: "bold" }}
+          >
             ₹{calculations.grandTotal.toFixed(2)}
           </Typography>
         </Grid>
       </Grid>
 
-      <Box mt={4} textAlign="right">
-        <Button type="submit" variant="contained" color="primary">
-          Submit Invoice
+      <Box sx={{ marginTop: "16px", textAlign: "right" }}>
+        <Button
+          type="submit"
+          variant="contained"
+          onClick={handleSubmit(console.log)}
+          sx={{
+            backgroundColor: "#1976d2",
+            "&:hover": { backgroundColor: "#115293" },
+          }}
+        >
+          Save Voucher
         </Button>
       </Box>
     </Box>
