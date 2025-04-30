@@ -96,6 +96,7 @@ const defaultValues = {
       cessRate: 0,
     },
   ],
+  roundOffAmount: 0,
 };
 
 export default function CreateCounterSales() {
@@ -188,7 +189,7 @@ export default function CreateCounterSales() {
 
   useEffect(() => {
     debouncedUpdate();
-  }, [items, roundOffAmount]);
+  }, [items, roundOffAmount, debouncedUpdate]);
 
   // Async load items for select dropdown
   const loadItems = (inputValue) => {
@@ -212,20 +213,24 @@ export default function CreateCounterSales() {
   const handleItemChange = (selected, index) => {
     if (selected) {
       const itemData = selected.data;
-      setValue(`items.${index}`, {
-        ...items[index],
-        itemId: itemData.id,
-        itemCode: itemData.code,
-        itemName: itemData.name,
-        unitPrice: itemData.price,
-        cgstRate: itemData.cgst,
-        sgstRate: itemData.sgst,
-        igstRate: itemData.igst,
-        cessRate: itemData.cess,
-        quantity: items[index].quantity || 1,
-        discountType: items[index].discountType || "PERCENTAGE",
-        discountValue: items[index].discountValue || 0,
-      });
+      setValue(
+        `items.${index}`,
+        {
+          ...items[index],
+          itemId: itemData.id,
+          itemCode: itemData.code,
+          itemName: itemData.name,
+          unitPrice: itemData.price,
+          cgstRate: itemData.cgst,
+          sgstRate: itemData.sgst,
+          igstRate: itemData.igst,
+          cessRate: itemData.cess,
+          quantity: items[index].quantity || 1,
+          discountType: items[index].discountType || "PERCENTAGE",
+          discountValue: items[index].discountValue || 0,
+        },
+        { shouldValidate: true, shouldDirty: true },
+      );
     }
   };
 
@@ -486,7 +491,6 @@ export default function CreateCounterSales() {
         <Grid item xs={6} textAlign="right">
           <Typography>₹{calculations.subtotal.toFixed(2)}</Typography>
         </Grid>
-
         <Grid item xs={6}>
           <Typography>Discounts:</Typography>
         </Grid>
@@ -495,68 +499,77 @@ export default function CreateCounterSales() {
             -₹{calculations.totalDiscount.toFixed(2)}
           </Typography>
         </Grid>
-
         <Grid item xs={6}>
           <Typography>Taxable Amount:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
           <Typography>₹{calculations.totalTaxableAmount.toFixed(2)}</Typography>
         </Grid>
-
         <Grid item xs={6}>
           <Typography>CGST:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
           <Typography>₹{calculations.totalCgst.toFixed(2)}</Typography>
         </Grid>
-
         <Grid item xs={6}>
           <Typography>SGST:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
           <Typography>₹{calculations.totalSgst.toFixed(2)}</Typography>
         </Grid>
-
         <Grid item xs={6}>
           <Typography>IGST:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
           <Typography>₹{calculations.totalIgst.toFixed(2)}</Typography>
         </Grid>
-
         <Grid item xs={6}>
           <Typography>Cess:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
           <Typography>₹{calculations.totalCess.toFixed(2)}</Typography>
         </Grid>
-
+        <Grid item xs={6}>
+          <Typography>Total Tax:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography>₹{calculations.totalTax.toFixed(2)}</Typography>
+        </Grid>
         <Grid item xs={6}>
           <Typography>Round Off:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
           <TextField
-            {...register("roundOffAmount", { valueAsNumber: true })}
             size="small"
             type="number"
-            sx={{ width: 100 }}
-            inputProps={{ step: "any" }}
+            value={roundOffAmount}
+            onChange={(e) =>
+              setValue("roundOffAmount", parseFloat(e.target.value) || 0, {
+                shouldValidate: true,
+                shouldDirty: true,
+              })
+            }
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">₹</InputAdornment>
+              ),
+            }}
+            sx={{ width: 120 }}
           />
         </Grid>
-
         <Grid item xs={6}>
           <Typography variant="h6">Grand Total:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
-          <Typography variant="h6">
+          <Typography variant="h6" color="primary">
             ₹{calculations.grandTotal.toFixed(2)}
           </Typography>
         </Grid>
       </Grid>
 
       <Box mt={4} textAlign="right">
-        <Button type="submit" variant="contained" size="large" color="success">
-          Save Invoice
+        <Button type="submit" variant="contained" color="primary">
+          Submit Invoice
         </Button>
       </Box>
     </Box>
