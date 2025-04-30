@@ -12,23 +12,57 @@ import {
   TableBody,
   TableCell,
   TableContainer,
+  TableHead,
   TableRow,
   Paper,
+  InputAdornment,
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import AsyncSelect from "react-select/async";
+import { useDebouncedCallback } from "use-debounce";
+
+// Dummy items data
+const dummyItems = [
+  {
+    id: 1,
+    code: "ITEM001",
+    name: "Laptop",
+    cgst: 9,
+    sgst: 9,
+    igst: 0,
+    cess: 0,
+    price: 50000,
+  },
+  {
+    id: 2,
+    code: "ITEM002",
+    name: "Mouse",
+    cgst: 9,
+    sgst: 9,
+    igst: 0,
+    cess: 0,
+    price: 500,
+  },
+  {
+    id: 3,
+    code: "ITEM003",
+    name: "Keyboard",
+    cgst: 9,
+    sgst: 9,
+    igst: 0,
+    cess: 0,
+    price: 1500,
+  },
+];
 
 const itemSchema = z.object({
   itemId: z.number(),
   itemCode: z.string().min(1),
   itemName: z.string().min(1),
-  batchNumber: z.string().optional(),
-  warehouseName: z.string().optional(),
   quantity: z.number().positive(),
   unitPrice: z.number().nonnegative(),
   discountType: z.enum(["PERCENTAGE", "AMOUNT"]),
-  discountPercentage: z.number().min(0).max(100).optional(),
-  discountAmount: z.number().optional(),
-  isTaxable: z.boolean(),
+  discountValue: z.number().min(0),
   cgstRate: z.number().min(0).max(100),
   sgstRate: z.number().min(0).max(100),
   igstRate: z.number().min(0).max(100),
@@ -39,11 +73,7 @@ const formSchema = z.object({
   customerName: z.string().min(1),
   orderDate: z.string(),
   paymentMethod: z.enum(["CASH", "CARD", "UPI"]),
-  referenceNumber: z.string().optional(),
-  billingAddress: z.string().min(1),
-  shippingAddress: z.string().min(1),
   items: z.array(itemSchema).min(1),
-  additionalCharges: z.number().optional(),
   roundOffAmount: z.number().optional(),
 });
 
@@ -51,8 +81,6 @@ const defaultValues = {
   customerName: "",
   orderDate: new Date().toISOString().split("T")[0],
   paymentMethod: "CASH",
-  billingAddress: "",
-  shippingAddress: "",
   items: [
     {
       itemId: 0,
@@ -61,8 +89,7 @@ const defaultValues = {
       quantity: 1,
       unitPrice: 0,
       discountType: "PERCENTAGE",
-      discountPercentage: 0,
-      isTaxable: true,
+      discountValue: 0,
       cgstRate: 0,
       sgstRate: 0,
       igstRate: 0,
@@ -72,7 +99,7 @@ const defaultValues = {
 };
 
 export default function CreateCounterSales() {
-  const { control, handleSubmit, register, watch } = useForm({
+  const { control, handleSubmit, register, watch, setValue } = useForm({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
@@ -91,7 +118,26 @@ export default function CreateCounterSales() {
     grandTotal: 0,
   });
 
-  useEffect(() => {
+  const calculateItemTotals = (item) => {
+    const lineTotal = item.quantity * item.unitPrice;
+    const discount =
+      item.discountType === "PERCENTAGE"
+        ? (lineTotal * item.discountValue) / 100
+        : item.discountValue;
+    const taxableAmount = lineTotal - discount;
+
+    return {
+      lineTotal,
+      discount,
+      taxableAmount,
+      cgst: (taxableAmount * item.cgstRate) / 100,
+      sgst: (taxableAmount * item.sgstRate) / 100,
+      igst: (taxableAmount * item.igstRate) / 100,
+      cess: (taxableAmount * item.cessRate) / 100,
+    };
+  };
+
+  const debouncedUpdate = useDebouncedCallback(() => {
     let subtotal = 0;
     let totalDiscount = 0;
     let totalTaxableAmount = 0;
@@ -101,30 +147,20 @@ export default function CreateCounterSales() {
     let totalCess = 0;
 
     items.forEach((item) => {
-      const lineTotal = item.quantity * item.unitPrice;
+      const { lineTotal, discount, taxableAmount, cgst, sgst, igst, cess } =
+        calculateItemTotals(item);
       subtotal += lineTotal;
-
-      const discount =
-        item.discountType === "PERCENTAGE"
-          ? (lineTotal * (item.discountPercentage || 0)) / 100
-          : item.discountAmount || 0;
       totalDiscount += discount;
-
-      const taxableAmount = lineTotal - discount;
       totalTaxableAmount += taxableAmount;
-
-      totalCgst += taxableAmount * (item.cgstRate / 100);
-      totalSgst += taxableAmount * (item.sgstRate / 100);
-      totalIgst += taxableAmount * (item.igstRate / 100);
-      totalCess += taxableAmount * (item.cessRate / 100);
+      totalCgst += cgst;
+      totalSgst += sgst;
+      totalIgst += igst;
+      totalCess += cess;
     });
 
     const totalTax = totalCgst + totalSgst + totalIgst + totalCess;
     const grandTotal =
-      totalTaxableAmount +
-      totalTax +
-      (watch("additionalCharges") || 0) +
-      (watch("roundOffAmount") || 0);
+      totalTaxableAmount + totalTax + (watch("roundOffAmount") || 0);
 
     setCalculations({
       subtotal,
@@ -137,45 +173,58 @@ export default function CreateCounterSales() {
       totalTax,
       grandTotal,
     });
-  }, [items, watch("additionalCharges"), watch("roundOffAmount")]);
+  }, 300);
+
+  useEffect(() => debouncedUpdate(), [items, watch("roundOffAmount")]);
+
+  const loadItems = (inputValue) => {
+    return new Promise((resolve) => {
+      resolve(
+        dummyItems
+          .filter(
+            (item) =>
+              item.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+              item.code.toLowerCase().includes(inputValue.toLowerCase()),
+          )
+          .map((item) => ({
+            value: item.id,
+            label: `${item.code} - ${item.name}`,
+            data: item,
+          })),
+      );
+    });
+  };
 
   return (
     <Box component="form" onSubmit={handleSubmit(console.log)} p={4}>
       <Typography variant="h5" mb={4}>
-        Counter Sale Entry
+        Counter Sale Invoice
       </Typography>
 
-      {/* Order Details Section */}
+      {/* Customer Details */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <TextField
             {...register("customerName")}
             label="Customer Name"
             fullWidth
             required
           />
+        </Grid>
+        <Grid item xs={12} md={4}>
           <TextField
             {...register("orderDate")}
-            label="Order Date"
+            label="Date"
             type="date"
             fullWidth
             required
-            sx={{ mt: 2 }}
-          />
-          <TextField
-            {...register("billingAddress")}
-            label="Billing Address"
-            fullWidth
-            required
-            sx={{ mt: 2 }}
           />
         </Grid>
-
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <TextField
             {...register("paymentMethod")}
             select
-            label="Payment Method"
+            label="Payment Mode"
             fullWidth
             required
           >
@@ -183,164 +232,215 @@ export default function CreateCounterSales() {
             <MenuItem value="CARD">Card</MenuItem>
             <MenuItem value="UPI">UPI</MenuItem>
           </TextField>
-          <TextField
-            {...register("referenceNumber")}
-            label="Reference Number"
-            fullWidth
-            sx={{ mt: 2 }}
-          />
-          <TextField
-            {...register("shippingAddress")}
-            label="Shipping Address"
-            fullWidth
-            required
-            sx={{ mt: 2 }}
-          />
         </Grid>
       </Grid>
 
-      {/* Items Section */}
-      <Typography variant="h6" gutterBottom>
-        Items
-      </Typography>
-      {fields.map((item, index) => (
-        <Grid container spacing={2} key={item.id} sx={{ mb: 2 }}>
-          <Grid item xs={12} md={3}>
-            <TextField
-              {...register(`items.${index}.itemCode`)}
-              label="Item Code"
-              fullWidth
-              required
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              {...register(`items.${index}.itemName`)}
-              label="Item Name"
-              fullWidth
-              required
-            />
-          </Grid>
-          <Grid item xs={6} md={1}>
-            <TextField
-              {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-              label="Qty"
-              type="number"
-              fullWidth
-              required
-            />
-          </Grid>
-          <Grid item xs={6} md={1}>
-            <TextField
-              {...register(`items.${index}.unitPrice`, { valueAsNumber: true })}
-              label="Price"
-              type="number"
-              fullWidth
-              required
-            />
-          </Grid>
-          <Grid item xs={6} md={2}>
-            <TextField
-              {...register(`items.${index}.discountType`)}
-              select
-              label="Discount Type"
-              fullWidth
-            >
-              <MenuItem value="PERCENTAGE">Percentage</MenuItem>
-              <MenuItem value="AMOUNT">Amount</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid item xs={6} md={1}>
-            <TextField
-              {...register(`items.${index}.discountPercentage`, {
-                valueAsNumber: true,
-              })}
-              label="Discount %"
-              type="number"
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={12} md={1}>
-            <Button onClick={() => remove(index)} color="error">
-              Remove
-            </Button>
-          </Grid>
-        </Grid>
-      ))}
+      {/* Items Table */}
+      <TableContainer component={Paper} sx={{ mb: 2 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Item</TableCell>
+              <TableCell align="right">Price</TableCell>
+              <TableCell align="right">Qty</TableCell>
+              <TableCell align="right">Discount</TableCell>
+              <TableCell align="right">Taxable</TableCell>
+              <TableCell align="right">CGST</TableCell>
+              <TableCell align="right">SGST</TableCell>
+              <TableCell align="right">Total</TableCell>
+              <TableCell width={50}></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {fields.map((item, index) => {
+              const totals = calculateItemTotals(items[index]);
+              return (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <Controller
+                      name={`items.${index}.itemCode`}
+                      control={control}
+                      render={({ field }) => (
+                        <AsyncSelect
+                          cacheOptions
+                          defaultOptions
+                          loadOptions={loadItems}
+                          onChange={(selected) => {
+                            if (selected) {
+                              setValue(`items.${index}`, {
+                                ...items[index],
+                                itemId: selected.data.id,
+                                itemCode: selected.data.code,
+                                itemName: selected.data.name,
+                                unitPrice: selected.data.price,
+                                cgstRate: selected.data.cgst,
+                                sgstRate: selected.data.sgst,
+                              });
+                            }
+                          }}
+                          value={{
+                            value: items[index].itemId,
+                            label: `${items[index].itemCode} - ${items[index].itemName}`,
+                          }}
+                          styles={{
+                            container: (base) => ({ ...base, width: 250 }),
+                          }}
+                        />
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <TextField
+                      {...register(`items.${index}.unitPrice`, {
+                        valueAsNumber: true,
+                      })}
+                      size="small"
+                      type="number"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">₹</InputAdornment>
+                        ),
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <TextField
+                      {...register(`items.${index}.quantity`, {
+                        valueAsNumber: true,
+                      })}
+                      size="small"
+                      type="number"
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Grid container spacing={1}>
+                      <Grid item xs={6}>
+                        <TextField
+                          {...register(`items.${index}.discountType`)}
+                          select
+                          size="small"
+                          defaultValue="PERCENTAGE"
+                        >
+                          <MenuItem value="PERCENTAGE">%</MenuItem>
+                          <MenuItem value="AMOUNT">₹</MenuItem>
+                        </TextField>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          {...register(`items.${index}.discountValue`, {
+                            valueAsNumber: true,
+                          })}
+                          size="small"
+                          type="number"
+                        />
+                      </Grid>
+                    </Grid>
+                  </TableCell>
+                  <TableCell align="right">
+                    {totals.taxableAmount.toFixed(2)}
+                  </TableCell>
+                  <TableCell align="right">{totals.cgst.toFixed(2)}</TableCell>
+                  <TableCell align="right">{totals.sgst.toFixed(2)}</TableCell>
+                  <TableCell align="right">
+                    {(totals.taxableAmount + totals.cgst + totals.sgst).toFixed(
+                      2,
+                    )}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={() => remove(index)}
+                    >
+                      ×
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
       <Button
         onClick={() => append(defaultValues.items[0])}
         variant="outlined"
         sx={{ mb: 4 }}
       >
-        Add Item
+        + Add Item
       </Button>
 
-      {/* Calculations Section */}
-      <TableContainer component={Paper} sx={{ mb: 4 }}>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell colSpan={2}>
-                <strong>Order Summary</strong>
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Subtotal</TableCell>
-              <TableCell align="right">
-                {calculations.subtotal.toFixed(2)}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Total Discount</TableCell>
-              <TableCell align="right">
-                ({calculations.totalDiscount.toFixed(2)})
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Taxable Amount</TableCell>
-              <TableCell align="right">
-                {calculations.totalTaxableAmount.toFixed(2)}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>CGST ({calculations.totalCgst.toFixed(2)})</TableCell>
-              <TableCell align="right">
-                {calculations.totalCgst.toFixed(2)}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>SGST ({calculations.totalSgst.toFixed(2)})</TableCell>
-              <TableCell align="right">
-                {calculations.totalSgst.toFixed(2)}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>IGST ({calculations.totalIgst.toFixed(2)})</TableCell>
-              <TableCell align="right">
-                {calculations.totalIgst.toFixed(2)}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>Total Tax</TableCell>
-              <TableCell align="right">
-                {calculations.totalTax.toFixed(2)}
-              </TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell>
-                <strong>Grand Total</strong>
-              </TableCell>
-              <TableCell align="right">
-                <strong>{calculations.grandTotal.toFixed(2)}</strong>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Totals Section */}
+      <Grid
+        container
+        spacing={2}
+        justifyContent="flex-end"
+        sx={{ maxWidth: 400, ml: "auto" }}
+      >
+        <Grid item xs={6}>
+          <Typography>Subtotal:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography>₹{calculations.subtotal.toFixed(2)}</Typography>
+        </Grid>
 
-      <Button type="submit" variant="contained" size="large">
-        Submit Order
-      </Button>
+        <Grid item xs={6}>
+          <Typography>Discounts:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography color="error">
+            -₹{calculations.totalDiscount.toFixed(2)}
+          </Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography>Taxable Amount:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography>₹{calculations.totalTaxableAmount.toFixed(2)}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography>CGST:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography>₹{calculations.totalCgst.toFixed(2)}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography>SGST:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography>₹{calculations.totalSgst.toFixed(2)}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography>Round Off:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <TextField
+            {...register("roundOffAmount", { valueAsNumber: true })}
+            size="small"
+            type="number"
+            sx={{ width: 100 }}
+          />
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography variant="h6">Grand Total:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography variant="h6">
+            ₹{calculations.grandTotal.toFixed(2)}
+          </Typography>
+        </Grid>
+      </Grid>
+
+      <Box mt={4} textAlign="right">
+        <Button type="submit" variant="contained" size="large" color="success">
+          Save Invoice
+        </Button>
+      </Box>
     </Box>
   );
 }
