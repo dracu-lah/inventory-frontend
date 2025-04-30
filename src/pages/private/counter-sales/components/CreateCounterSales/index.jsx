@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -17,7 +18,6 @@ import {
   Paper,
   InputAdornment,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
 import AsyncSelect from "react-select/async";
 import { useDebouncedCallback } from "use-debounce";
 
@@ -56,7 +56,7 @@ const dummyItems = [
 ];
 
 const itemSchema = z.object({
-  itemId: z.number(),
+  itemId: z.number().min(1, "Select an item"),
   itemCode: z.string().min(1),
   itemName: z.string().min(1),
   quantity: z.number().positive(),
@@ -70,10 +70,10 @@ const itemSchema = z.object({
 });
 
 const formSchema = z.object({
-  customerName: z.string().min(1),
+  customerName: z.string().min(1, "Customer name is required"),
   orderDate: z.string(),
   paymentMethod: z.enum(["CASH", "CARD", "UPI"]),
-  items: z.array(itemSchema).min(1),
+  items: z.array(itemSchema).min(1, "Add at least one item"),
   roundOffAmount: z.number().optional(),
 });
 
@@ -99,13 +99,23 @@ const defaultValues = {
 };
 
 export default function CreateCounterSales() {
-  const { control, handleSubmit, register, watch, setValue } = useForm({
+  const {
+    control,
+    handleSubmit,
+    register,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm({
     resolver: zodResolver(formSchema),
     defaultValues,
+    mode: "onChange",
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const items = watch("items");
+  const roundOffAmount = watch("roundOffAmount") || 0;
+
   const [calculations, setCalculations] = useState({
     subtotal: 0,
     totalDiscount: 0,
@@ -118,13 +128,14 @@ export default function CreateCounterSales() {
     grandTotal: 0,
   });
 
+  // Calculate totals for each item
   const calculateItemTotals = (item) => {
     const lineTotal = item.quantity * item.unitPrice;
     const discount =
       item.discountType === "PERCENTAGE"
         ? (lineTotal * item.discountValue) / 100
         : item.discountValue;
-    const taxableAmount = lineTotal - discount;
+    const taxableAmount = Math.max(lineTotal - discount, 0);
 
     return {
       lineTotal,
@@ -137,6 +148,7 @@ export default function CreateCounterSales() {
     };
   };
 
+  // Debounced update for totals calculation
   const debouncedUpdate = useDebouncedCallback(() => {
     let subtotal = 0;
     let totalDiscount = 0;
@@ -159,8 +171,7 @@ export default function CreateCounterSales() {
     });
 
     const totalTax = totalCgst + totalSgst + totalIgst + totalCess;
-    const grandTotal =
-      totalTaxableAmount + totalTax + (watch("roundOffAmount") || 0);
+    const grandTotal = totalTaxableAmount + totalTax + roundOffAmount;
 
     setCalculations({
       subtotal,
@@ -175,23 +186,55 @@ export default function CreateCounterSales() {
     });
   }, 300);
 
-  useEffect(() => debouncedUpdate(), [items, watch("roundOffAmount")]);
+  useEffect(() => {
+    debouncedUpdate();
+  }, [items, roundOffAmount]);
 
+  // Async load items for select dropdown
   const loadItems = (inputValue) => {
     return new Promise((resolve) => {
-      resolve(
-        dummyItems
-          .filter(
-            (item) =>
-              item.name.toLowerCase().includes(inputValue.toLowerCase()) ||
-              item.code.toLowerCase().includes(inputValue.toLowerCase()),
-          )
-          .map((item) => ({
-            value: item.id,
-            label: `${item.code} - ${item.name}`,
-            data: item,
-          })),
-      );
+      const filtered = dummyItems
+        .filter(
+          (item) =>
+            item.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+            item.code.toLowerCase().includes(inputValue.toLowerCase()),
+        )
+        .map((item) => ({
+          value: item.id,
+          label: `${item.code} - ${item.name}`,
+          data: item,
+        }));
+      resolve(filtered);
+    });
+  };
+
+  // Handle item selection change
+  const handleItemChange = (selected, index) => {
+    if (selected) {
+      const itemData = selected.data;
+      setValue(`items.${index}`, {
+        ...items[index],
+        itemId: itemData.id,
+        itemCode: itemData.code,
+        itemName: itemData.name,
+        unitPrice: itemData.price,
+        cgstRate: itemData.cgst,
+        sgstRate: itemData.sgst,
+        igstRate: itemData.igst,
+        cessRate: itemData.cess,
+        quantity: items[index].quantity || 1,
+        discountType: items[index].discountType || "PERCENTAGE",
+        discountValue: items[index].discountValue || 0,
+      });
+    }
+  };
+
+  // Handle manual update of item fields (quantity, price, discount, etc.)
+  const handleFieldChange = (index, field, value) => {
+    const updatedItem = { ...items[index], [field]: value };
+    setValue(`items.${index}`, updatedItem, {
+      shouldValidate: true,
+      shouldDirty: true,
     });
   };
 
@@ -209,6 +252,8 @@ export default function CreateCounterSales() {
             label="Customer Name"
             fullWidth
             required
+            error={!!errors.customerName}
+            helperText={errors.customerName?.message}
           />
         </Grid>
         <Grid item xs={12} md={4}>
@@ -218,6 +263,7 @@ export default function CreateCounterSales() {
             type="date"
             fullWidth
             required
+            InputLabelProps={{ shrink: true }}
           />
         </Grid>
         <Grid item xs={12} md={4}>
@@ -237,18 +283,34 @@ export default function CreateCounterSales() {
 
       {/* Items Table */}
       <TableContainer component={Paper} sx={{ mb: 2 }}>
-        <Table size="small">
+        <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell>Item</TableCell>
-              <TableCell align="right">Price</TableCell>
-              <TableCell align="right">Qty</TableCell>
-              <TableCell align="right">Discount</TableCell>
-              <TableCell align="right">Taxable</TableCell>
-              <TableCell align="right">CGST</TableCell>
-              <TableCell align="right">SGST</TableCell>
-              <TableCell align="right">Total</TableCell>
-              <TableCell width={50}></TableCell>
+              <TableCell sx={{ minWidth: 250 }}>Item</TableCell>
+              <TableCell align="right" sx={{ minWidth: 100 }}>
+                Price (₹)
+              </TableCell>
+              <TableCell align="right" sx={{ minWidth: 80 }}>
+                Qty
+              </TableCell>
+              <TableCell align="center" sx={{ minWidth: 140 }}>
+                Discount
+              </TableCell>
+              <TableCell align="right" sx={{ minWidth: 100 }}>
+                Taxable (₹)
+              </TableCell>
+              <TableCell align="right" sx={{ minWidth: 80 }}>
+                CGST (₹)
+              </TableCell>
+              <TableCell align="right" sx={{ minWidth: 80 }}>
+                SGST (₹)
+              </TableCell>
+              <TableCell align="right" sx={{ minWidth: 100 }}>
+                Total (₹)
+              </TableCell>
+              <TableCell align="center" sx={{ minWidth: 50 }}>
+                &nbsp;
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -260,42 +322,52 @@ export default function CreateCounterSales() {
                     <Controller
                       name={`items.${index}.itemCode`}
                       control={control}
-                      render={({ field }) => (
+                      render={() => (
                         <AsyncSelect
                           cacheOptions
                           defaultOptions
                           loadOptions={loadItems}
-                          onChange={(selected) => {
-                            if (selected) {
-                              setValue(`items.${index}`, {
-                                ...items[index],
-                                itemId: selected.data.id,
-                                itemCode: selected.data.code,
-                                itemName: selected.data.name,
-                                unitPrice: selected.data.price,
-                                cgstRate: selected.data.cgst,
-                                sgstRate: selected.data.sgst,
-                              });
-                            }
-                          }}
-                          value={{
-                            value: items[index].itemId,
-                            label: `${items[index].itemCode} - ${items[index].itemName}`,
-                          }}
+                          onChange={(selected) =>
+                            handleItemChange(selected, index)
+                          }
+                          value={
+                            items[index].itemId
+                              ? {
+                                  value: items[index].itemId,
+                                  label: `${items[index].itemCode} - ${items[index].itemName}`,
+                                }
+                              : null
+                          }
+                          placeholder="Select item..."
                           styles={{
                             container: (base) => ({ ...base, width: 250 }),
+                            menu: (base) => ({ ...base, zIndex: 9999 }),
                           }}
+                          isClearable
                         />
                       )}
                     />
+                    {/* Show validation error if item not selected */}
+                    {errors.items?.[index]?.itemId && (
+                      <Typography color="error" variant="caption">
+                        {errors.items[index].itemId.message}
+                      </Typography>
+                    )}
                   </TableCell>
+
                   <TableCell align="right">
                     <TextField
-                      {...register(`items.${index}.unitPrice`, {
-                        valueAsNumber: true,
-                      })}
                       size="small"
                       type="number"
+                      inputProps={{ min: 0, step: "any" }}
+                      value={items[index].unitPrice}
+                      onChange={(e) =>
+                        handleFieldChange(
+                          index,
+                          "unitPrice",
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">₹</InputAdornment>
@@ -303,39 +375,67 @@ export default function CreateCounterSales() {
                       }}
                     />
                   </TableCell>
+
                   <TableCell align="right">
                     <TextField
-                      {...register(`items.${index}.quantity`, {
-                        valueAsNumber: true,
-                      })}
                       size="small"
                       type="number"
+                      inputProps={{ min: 1, step: 1 }}
+                      value={items[index].quantity}
+                      onChange={(e) =>
+                        handleFieldChange(
+                          index,
+                          "quantity",
+                          parseInt(e.target.value) || 1,
+                        )
+                      }
                     />
                   </TableCell>
-                  <TableCell align="right">
-                    <Grid container spacing={1}>
-                      <Grid item xs={6}>
+
+                  <TableCell align="center">
+                    <Grid
+                      container
+                      spacing={1}
+                      justifyContent="center"
+                      alignItems="center"
+                    >
+                      <Grid item xs={5}>
                         <TextField
-                          {...register(`items.${index}.discountType`)}
                           select
                           size="small"
-                          defaultValue="PERCENTAGE"
+                          value={items[index].discountType}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              index,
+                              "discountType",
+                              e.target.value,
+                            )
+                          }
+                          fullWidth
                         >
                           <MenuItem value="PERCENTAGE">%</MenuItem>
                           <MenuItem value="AMOUNT">₹</MenuItem>
                         </TextField>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid item xs={7}>
                         <TextField
-                          {...register(`items.${index}.discountValue`, {
-                            valueAsNumber: true,
-                          })}
                           size="small"
                           type="number"
+                          inputProps={{ min: 0, step: "any" }}
+                          value={items[index].discountValue}
+                          onChange={(e) =>
+                            handleFieldChange(
+                              index,
+                              "discountValue",
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          fullWidth
                         />
                       </Grid>
                     </Grid>
                   </TableCell>
+
                   <TableCell align="right">
                     {totals.taxableAmount.toFixed(2)}
                   </TableCell>
@@ -346,11 +446,14 @@ export default function CreateCounterSales() {
                       2,
                     )}
                   </TableCell>
+
                   <TableCell align="center">
                     <Button
                       size="small"
                       color="error"
                       onClick={() => remove(index)}
+                      sx={{ minWidth: 32 }}
+                      aria-label="Remove item"
                     >
                       ×
                     </Button>
@@ -415,6 +518,20 @@ export default function CreateCounterSales() {
         </Grid>
 
         <Grid item xs={6}>
+          <Typography>IGST:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography>₹{calculations.totalIgst.toFixed(2)}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
+          <Typography>Cess:</Typography>
+        </Grid>
+        <Grid item xs={6} textAlign="right">
+          <Typography>₹{calculations.totalCess.toFixed(2)}</Typography>
+        </Grid>
+
+        <Grid item xs={6}>
           <Typography>Round Off:</Typography>
         </Grid>
         <Grid item xs={6} textAlign="right">
@@ -423,6 +540,7 @@ export default function CreateCounterSales() {
             size="small"
             type="number"
             sx={{ width: 100 }}
+            inputProps={{ step: "any" }}
           />
         </Grid>
 
