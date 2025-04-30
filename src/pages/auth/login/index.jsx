@@ -45,19 +45,17 @@ const LoginPage = () => {
   const loginMutation = useMutation({
     mutationFn: LoginAPI,
     onSuccess: ({ data }) => {
-      console.log("data", data);
       setToken({
-        accessToken: data.accessToken,
+        accessToken: data.token,
         refreshToken: data.refreshToken,
         data: {
           userName: data.userName,
-          roleName: data.roleName,
+          roles: data.roles,
         },
       });
       navigate(routePath.dashboard);
     },
     onError: (response) => {
-      console.log("response", response);
       showToast(response.message, "danger");
       setError("root.serverError", {
         type: response.status,
@@ -67,12 +65,6 @@ const LoginPage = () => {
   });
 
   const onSubmit = ({ usernameOrEmail, password }) => {
-    // setToken({
-    //   accessToken: "asdfasdf",
-    // });
-
-    // navigate(routePath.dashboard);
-    //
     queryClient.invalidateQueries();
     loginMutation.mutate({
       username: usernameOrEmail,
