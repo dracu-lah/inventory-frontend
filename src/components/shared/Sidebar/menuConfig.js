@@ -3,6 +3,7 @@ import CategoryIcon from "@mui/icons-material/Category";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import routePath from "@/router/routePath";
+import { PointOfSale } from "@mui/icons-material";
 
 export const menuConfig = [
   {
@@ -10,15 +11,21 @@ export const menuConfig = [
     label: "Dashboard",
     route: routePath.dashboard,
   },
+
+  {
+    icon: PointOfSale,
+    label: "Counter Sales",
+    route: routePath.counterSales,
+  },
   {
     icon: CategoryIcon,
     label: "Categories",
-    route: routePath.categories, // Define route for Categories
+    route: routePath.categories,
   },
   {
     icon: InventoryIcon,
     label: "Products",
-    route: routePath.products, // Define route for Products
+    route: routePath.products,
   },
   {
     icon: LocalOfferIcon,
@@ -26,12 +33,12 @@ export const menuConfig = [
     subMenu: [
       {
         label: "Add New Stock",
-        route: routePath.addStock, // Define route for Add Stock
+        route: routePath.addStock,
         icon: InventoryIcon,
       },
       {
         label: "Manage Stock",
-        route: routePath.manageStock, // Define route for Manage Stock
+        route: routePath.manageStock,
         icon: InventoryIcon,
       },
     ],
