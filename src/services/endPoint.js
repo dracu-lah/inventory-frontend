@@ -6,4 +6,7 @@ export default {
 
   // ========================= DASHBOARD APIS =========================
   getDashboardData: "/api/Admin/Reports/GetDashboardDisplayData",
+
+  // ========================= COUNTERSALES APIS =========================
+  createCounterSales: "/api/Admin/Reports/GetDashboardDisplayData",
 };

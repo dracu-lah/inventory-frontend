@@ -1,5 +1,11 @@
+import CreateCounterSales from "./components/CreateCounterSales";
+
 const CounterSalesPage = () => {
-  return <div>CounterSalesPage</div>;
+  return (
+    <div>
+      <CreateCounterSales />
+    </div>
+  );
 };
 
 export default CounterSalesPage;
