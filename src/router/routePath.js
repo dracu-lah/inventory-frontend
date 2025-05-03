@@ -3,5 +3,6 @@ export default {
   login: "/login",
   // ========================= GENERAL ROUTES =========================
   dashboard: "/",
+  itemMaster: "/item-master",
   counterSales: "/counter-sales",
 };

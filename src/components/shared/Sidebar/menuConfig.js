@@ -13,34 +13,34 @@ export const menuConfig = [
   },
 
   {
+    icon: InventoryIcon,
+    label: "Item Master",
+    route: routePath.itemMaster,
+  },
+  {
     icon: PointOfSale,
     label: "Counter Sales",
     route: routePath.counterSales,
   },
-  {
-    icon: CategoryIcon,
-    label: "Categories",
-    route: routePath.categories,
-  },
-  {
-    icon: InventoryIcon,
-    label: "Products",
-    route: routePath.products,
-  },
-  {
-    icon: LocalOfferIcon,
-    label: "Stock Management",
-    subMenu: [
-      {
-        label: "Add New Stock",
-        route: routePath.addStock,
-        icon: InventoryIcon,
-      },
-      {
-        label: "Manage Stock",
-        route: routePath.manageStock,
-        icon: InventoryIcon,
-      },
-    ],
-  },
+  // {
+  //   icon: CategoryIcon,
+  //   label: "Categories",
+  //   route: routePath.categories,
+  // },
+  // {
+  //   icon: LocalOfferIcon,
+  //   label: "Stock Management",
+  //   subMenu: [
+  //     {
+  //       label: "Add New Stock",
+  //       route: routePath.addStock,
+  //       icon: InventoryIcon,
+  //     },
+  //     {
+  //       label: "Manage Stock",
+  //       route: routePath.manageStock,
+  //       icon: InventoryIcon,
+  //     },
+  //   ],
+  // },
 ];
