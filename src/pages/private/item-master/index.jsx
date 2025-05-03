@@ -12,6 +12,7 @@ import {
 import { Add, Search } from "@mui/icons-material";
 import ItemTable from "./components/ItemMaster/ItemTable";
 import AddItemModal from "./components/ItemMaster/AddItemModal";
+import EditItemModal from "./components/ItemMaster/EditItemModal";
 
 const ItemMasterPage = () => {
   // Dummy items data (would come from API in a real application)
@@ -49,6 +50,7 @@ const ItemMasterPage = () => {
   ]);
 
   const [openAddModal, setOpenAddModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [editItem, setEditItem] = useState(null);
 
@@ -71,21 +73,16 @@ const ItemMasterPage = () => {
   // Handler for editing an item
   const handleEditItem = (item) => {
     setEditItem(item);
-    setOpenAddModal(true);
+    setOpenEditModal(true);
   };
 
   // Handler for saving edited item
-  const handleSaveItem = (itemData) => {
-    if (editItem) {
-      setItems(
-        items.map((item) =>
-          item.id === editItem.id ? { ...itemData, id: item.id } : item,
-        ),
-      );
-      setEditItem(null);
-    } else {
-      handleAddItem(itemData);
-    }
+  const handleSaveEditedItem = (itemData) => {
+    setItems(
+      items.map((item) =>
+        item.id === editItem.id ? { ...itemData, id: item.id } : item,
+      ),
+    );
   };
 
   // Handler for deleting an item
@@ -104,10 +101,7 @@ const ItemMasterPage = () => {
             variant="contained"
             color="primary"
             startIcon={<Add />}
-            onClick={() => {
-              setEditItem(null);
-              setOpenAddModal(true);
-            }}
+            onClick={() => setOpenAddModal(true)}
           >
             Add Item
           </Button>
@@ -137,11 +131,19 @@ const ItemMasterPage = () => {
         />
       </Paper>
 
+      {/* Add Item Modal */}
       <AddItemModal
         open={openAddModal}
         onClose={() => setOpenAddModal(false)}
-        onSubmit={handleSaveItem}
-        defaultValues={editItem}
+        onSubmit={handleAddItem}
+      />
+
+      {/* Edit Item Modal */}
+      <EditItemModal
+        open={openEditModal}
+        onClose={() => setOpenEditModal(false)}
+        onSubmit={handleSaveEditedItem}
+        item={editItem}
       />
     </Container>
   );
