@@ -136,22 +136,33 @@ export default function CreateCounterSales() {
   const [newItem, setNewItem] = useState(defaultItemValues);
   const inputRefs = useRef([]);
 
-  // Calculate totals for each item
+  // Calculate totals for each item with proper tax calculation
   const calculateItemTotals = (item) => {
     const lineTotal = item.quantity * item.unitPrice;
     const discount =
       item.discountType === "PERCENTAGE"
         ? (lineTotal * item.discountValue) / 100
         : item.discountValue;
-    const taxableAmount = Math.max(lineTotal - discount, 0);
+
+    // Apply the formula: (discounted amount * 100) / (100 + CGST% + SGST%)
+    const discountedAmount = Math.max(lineTotal - discount, 0);
+    const taxableAmount =
+      (discountedAmount * 100) / (100 + item.cgstRate + item.sgstRate);
+
+    // Calculate taxes based on the taxable amount
+    const cgst = (taxableAmount * item.cgstRate) / 100;
+    const sgst = (taxableAmount * item.sgstRate) / 100;
+    const igst = (taxableAmount * item.igstRate) / 100;
+    const cess = (taxableAmount * item.cessRate) / 100;
+
     return {
       lineTotal,
       discount,
       taxableAmount,
-      cgst: (taxableAmount * item.cgstRate) / 100,
-      sgst: (taxableAmount * item.sgstRate) / 100,
-      igst: (taxableAmount * item.igstRate) / 100,
-      cess: (taxableAmount * item.cessRate) / 100,
+      cgst,
+      sgst,
+      igst,
+      cess,
     };
   };
 
