@@ -25,7 +25,6 @@ const ItemTable = ({ items, onEditItem, onDeleteItem }) => {
             <TableCell align="right">SGST (%)</TableCell>
             <TableCell align="right">IGST (%)</TableCell>
             <TableCell align="right">CESS (%)</TableCell>
-            <TableCell align="right">Price (₹)</TableCell>
             <TableCell align="center">Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -34,13 +33,10 @@ const ItemTable = ({ items, onEditItem, onDeleteItem }) => {
             <TableRow key={item.id}>
               <TableCell>{item.code}</TableCell>
               <TableCell>{item.name}</TableCell>
-              <TableCell align="right">{item.cgst}</TableCell>
-              <TableCell align="right">{item.sgst}</TableCell>
-              <TableCell align="right">{item.igst}</TableCell>
-              <TableCell align="right">{item.cess}</TableCell>
-              <TableCell align="right">
-                {item.price.toLocaleString("en-IN")}
-              </TableCell>
+              <TableCell align="right">{item.cgstRate}</TableCell>
+              <TableCell align="right">{item.sgstRate}</TableCell>
+              <TableCell align="right">{item.igstRate}</TableCell>
+              <TableCell align="right">{item.cessRate}</TableCell>
               <TableCell align="center">
                 <Tooltip title="Edit">
                   <IconButton onClick={() => onEditItem(item)}>

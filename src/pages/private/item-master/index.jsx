@@ -21,38 +21,39 @@ const ItemMasterPage = () => {
     queryKey: ["GetProductsAPI"],
     queryFn: () => GetProductsAPI(),
   });
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      code: "ITEM001",
-      name: "Laptop",
-      cgst: 9,
-      sgst: 9,
-      igst: 0,
-      cess: 0,
-      price: 50000,
-    },
-    {
-      id: 2,
-      code: "ITEM002",
-      name: "Mouse",
-      cgst: 9,
-      sgst: 9,
-      igst: 0,
-      cess: 0,
-      price: 500,
-    },
-    {
-      id: 3,
-      code: "ITEM003",
-      name: "Keyboard",
-      cgst: 9,
-      sgst: 9,
-      igst: 0,
-      cess: 0,
-      price: 1500,
-    },
-  ]);
+  const items = data?.data?.content || [];
+  // const [items, setItems] = useState([
+  //   {
+  //     id: 1,
+  //     code: "ITEM001",
+  //     name: "Laptop",
+  //     cgst: 9,
+  //     sgst: 9,
+  //     igst: 0,
+  //     cess: 0,
+  //     price: 50000,
+  //   },
+  //   {
+  //     id: 2,
+  //     code: "ITEM002",
+  //     name: "Mouse",
+  //     cgst: 9,
+  //     sgst: 9,
+  //     igst: 0,
+  //     cess: 0,
+  //     price: 500,
+  //   },
+  //   {
+  //     id: 3,
+  //     code: "ITEM003",
+  //     name: "Keyboard",
+  //     cgst: 9,
+  //     sgst: 9,
+  //     igst: 0,
+  //     cess: 0,
+  //     price: 1500,
+  //   },
+  // ]);
 
   const [openAddModal, setOpenAddModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
@@ -72,7 +73,7 @@ const ItemMasterPage = () => {
       ...itemData,
       id: items.length > 0 ? Math.max(...items.map((item) => item.id)) + 1 : 1,
     };
-    setItems([...items, newItem]);
+    // setItems([...items, newItem]);
   };
 
   // Handler for editing an item
@@ -83,16 +84,16 @@ const ItemMasterPage = () => {
 
   // Handler for saving edited item
   const handleSaveEditedItem = (itemData) => {
-    setItems(
-      items.map((item) =>
-        item.id === editItem.id ? { ...itemData, id: item.id } : item,
-      ),
-    );
+    // setItems(
+    //   items.map((item) =>
+    //     item.id === editItem.id ? { ...itemData, id: item.id } : item,
+    //   ),
+    // );
   };
 
   // Handler for deleting an item
   const handleDeleteItem = (itemId) => {
-    setItems(items.filter((item) => item.id !== itemId));
+    // setItems(items.filter((item) => item.id !== itemId));
   };
 
   return (
