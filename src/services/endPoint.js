@@ -9,7 +9,9 @@ export default {
 
   // ========================= COUNTERSALES APIS =========================
   createCounterSales: "/api/Admin/Reports/GetDashboardDisplayData",
-  getItems: "",
   getItemPriceDetails: ({ priceListId, itemId }) =>
     `/price-list/${priceListId}/item/${itemId}/v2`,
+
+  // ========================= COUNTERSALES APIS =========================
+  getProducts: "",
 };
