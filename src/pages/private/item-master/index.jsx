@@ -12,9 +12,15 @@ import { Add, Search } from "@mui/icons-material";
 import ItemTable from "./components/ItemMaster/ItemTable";
 import AddItemModal from "./components/ItemMaster/AddItemModal";
 import EditItemModal from "./components/ItemMaster/EditItemModal";
+import { useQuery } from "@tanstack/react-query";
+import { GetProductsAPI } from "@/services/api";
 
 const ItemMasterPage = () => {
   // Dummy items data (would come from API in a real application)
+  const { data, isLoading } = useQuery({
+    queryKey: ["GetProductsAPI"],
+    queryFn: () => GetProductsAPI(),
+  });
   const [items, setItems] = useState([
     {
       id: 1,

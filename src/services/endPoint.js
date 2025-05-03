@@ -13,5 +13,5 @@ export default {
     `/price-list/${priceListId}/item/${itemId}/v2`,
 
   // ========================= COUNTERSALES APIS =========================
-  getProducts: "",
+  getProducts: "/api/inventory/items",
 };
