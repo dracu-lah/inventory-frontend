@@ -114,7 +114,7 @@ const UnitConversionsTab = ({
         </Typography>
         <Box sx={{ mb: 3, mt: 1 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={4} width={120}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>From Unit</InputLabel>
                 <Select
@@ -130,7 +130,7 @@ const UnitConversionsTab = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={4} width={120}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel>To Unit</InputLabel>
                 <Select
