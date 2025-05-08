@@ -325,7 +325,7 @@ export default function CreateCounterSales() {
             sx={{ backgroundColor: "#fff" }}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={4} width={120}>
           <TextField
             {...register("paymentMethod")}
             select
