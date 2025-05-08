@@ -107,7 +107,7 @@ const UnitConversionsTab = ({
   };
 
   return (
-    <Grid container spacing={3}>
+    <Grid spacing={3}>
       <Grid item xs={12}>
         <Typography variant="h6" gutterBottom>
           Add Unit Conversion
