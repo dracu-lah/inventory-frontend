@@ -14,8 +14,10 @@ import AddItemModal from "./components/ItemMaster/AddItemModal";
 import EditItemModal from "./components/ItemMaster/EditItemModal";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CreateItemAPI, GetItemsAPI } from "@/services/api";
+import { useToast } from "@/context/ToastContext";
 
 const ItemMasterPage = () => {
+  const { showToast } = useToast();
   // Dummy items data (would come from API in a real application)
   const { data, isLoading } = useQuery({
     queryKey: ["GetProductsAPI"],
@@ -69,8 +71,12 @@ const ItemMasterPage = () => {
 
   const addMutation = useMutation({
     mutationFn: CreateItemAPI,
-    onSuccess: () => {},
-    onError: ({ response }) => {},
+    onSuccess: () => {
+      showToast("Product Added Successfully!", "success");
+    },
+    onError: ({ response }) => {
+      showToast(response.data.message, "error");
+    },
   });
   // Handler for adding a new item
   const handleAddItem = (itemData) => {
