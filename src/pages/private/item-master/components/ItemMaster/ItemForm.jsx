@@ -17,8 +17,28 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Paper,
+  Container,
 } from "@mui/material";
 import UnitConversionsTab from "./UnitConversionsTab";
+
+// Sample dummy data for dropdowns
+const DUMMY_CATEGORIES = [
+  { id: "cat1", name: "Raw Materials" },
+  { id: "cat2", name: "Finished Goods" },
+  { id: "cat3", name: "Packaging" },
+  { id: "cat4", name: "Services" },
+  { id: "cat5", name: "Office Supplies" },
+];
+
+const DUMMY_UNITS = [
+  { id: "unit1", name: "Piece (Pcs)" },
+  { id: "unit2", name: "Kilogram (Kg)" },
+  { id: "unit3", name: "Liter (L)" },
+  { id: "unit4", name: "Box" },
+  { id: "unit5", name: "Meter (m)" },
+  { id: "unit6", name: "Carton" },
+];
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -30,17 +50,33 @@ function TabPanel(props) {
       id={`item-tabpanel-${index}`}
       aria-labelledby={`item-tab-${index}`}
       {...other}
+      style={{ minHeight: "400px" }} // Ensure consistent height
     >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && (
+        <Box sx={{ pt: 3, pb: 2 }}>
+          <Paper sx={{ p: 2 }}>{children}</Paper>
+        </Box>
+      )}
     </div>
   );
 }
 
-const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
+const ItemForm = ({
+  onSubmit,
+  defaultValues,
+  onCancel,
+  categories = [],
+  units = [],
+}) => {
   const [tabValue, setTabValue] = useState(0);
   const [unitConversions, setUnitConversions] = useState(
     defaultValues?.unitConversions || [],
   );
+
+  // Use dummy data if no real data is provided
+  const displayCategories =
+    categories.length > 0 ? categories : DUMMY_CATEGORIES;
+  const displayUnits = units.length > 0 ? units : DUMMY_UNITS;
 
   const {
     control,
@@ -49,22 +85,22 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
     formState: { errors },
   } = useForm({
     defaultValues: defaultValues || {
-      code: "",
-      name: "",
-      description: "",
-      categoryId: "",
-      hsnCode: "",
-      baseUnitId: "",
-      purchaseUnitId: "",
-      salesUnitId: "",
-      minStockLevel: 0,
-      maxStockLevel: 0,
-      reorderLevel: 0,
+      code: "ITM001",
+      name: "Sample Item",
+      description: "This is a sample item description",
+      categoryId: displayCategories[0]?.id || "",
+      hsnCode: "8471",
+      baseUnitId: displayUnits[0]?.id || "",
+      purchaseUnitId: displayUnits[0]?.id || "",
+      salesUnitId: displayUnits[0]?.id || "",
+      minStockLevel: 10,
+      maxStockLevel: 100,
+      reorderLevel: 20,
       batchEnabled: false,
       isTaxable: true,
-      cgstRate: 0,
-      sgstRate: 0,
-      igstRate: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      igstRate: 18,
       cessRate: 0,
       isActive: true,
     },
@@ -89,22 +125,24 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
 
   return (
     <form onSubmit={handleSubmit(onFormSubmit)}>
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           aria-label="item form tabs"
+          variant="fullWidth"
+          sx={{ backgroundColor: "background.paper" }}
         >
-          <Tab label="Basic Information" />
-          <Tab label="Inventory" />
-          <Tab label="Tax" />
-          <Tab label="Unit Conversions" />
+          <Tab label="Basic Information" sx={{ py: 2 }} />
+          <Tab label="Inventory" sx={{ py: 2 }} />
+          <Tab label="Tax" sx={{ py: 2 }} />
+          <Tab label="Unit Conversions" sx={{ py: 2 }} />
         </Tabs>
       </Box>
 
       {/* Basic Information Tab */}
       <TabPanel value={tabValue} index={0}>
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Controller
               name="code"
@@ -115,7 +153,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   {...field}
                   label="Item Code"
                   fullWidth
-                  margin="normal"
+                  variant="outlined"
                   error={!!errors.code}
                   helperText={errors.code?.message}
                 />
@@ -132,7 +170,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   {...field}
                   label="Item Name"
                   fullWidth
-                  margin="normal"
+                  variant="outlined"
                   error={!!errors.name}
                   helperText={errors.name?.message}
                 />
@@ -148,7 +186,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   {...field}
                   label="Description"
                   fullWidth
-                  margin="normal"
+                  variant="outlined"
                   multiline
                   rows={3}
                 />
@@ -156,8 +194,8 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
             />
           </Grid>
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Category</InputLabel>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="category-label">Category</InputLabel>
               <Controller
                 name="categoryId"
                 control={control}
@@ -165,10 +203,11 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 render={({ field }) => (
                   <Select
                     {...field}
+                    labelId="category-label"
                     label="Category"
                     error={!!errors.categoryId}
                   >
-                    {categories?.map((category) => (
+                    {displayCategories.map((category) => (
                       <MenuItem key={category.id} value={category.id}>
                         {category.name}
                       </MenuItem>
@@ -177,7 +216,11 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 )}
               />
               {errors.categoryId && (
-                <Typography color="error" variant="caption">
+                <Typography
+                  color="error"
+                  variant="caption"
+                  sx={{ mt: 0.5, ml: 1.5 }}
+                >
                   {errors.categoryId.message}
                 </Typography>
               )}
@@ -192,14 +235,14 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   {...field}
                   label="HSN Code"
                   fullWidth
-                  margin="normal"
+                  variant="outlined"
                 />
               )}
             />
           </Grid>
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Base Unit</InputLabel>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="base-unit-label">Base Unit</InputLabel>
               <Controller
                 name="baseUnitId"
                 control={control}
@@ -207,10 +250,11 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 render={({ field }) => (
                   <Select
                     {...field}
+                    labelId="base-unit-label"
                     label="Base Unit"
                     error={!!errors.baseUnitId}
                   >
-                    {units?.map((unit) => (
+                    {displayUnits.map((unit) => (
                       <MenuItem key={unit.id} value={unit.id}>
                         {unit.name}
                       </MenuItem>
@@ -219,15 +263,19 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 )}
               />
               {errors.baseUnitId && (
-                <Typography color="error" variant="caption">
+                <Typography
+                  color="error"
+                  variant="caption"
+                  sx={{ mt: 0.5, ml: 1.5 }}
+                >
                   {errors.baseUnitId.message}
                 </Typography>
               )}
             </FormControl>
           </Grid>
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Purchase Unit</InputLabel>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="purchase-unit-label">Purchase Unit</InputLabel>
               <Controller
                 name="purchaseUnitId"
                 control={control}
@@ -235,10 +283,11 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 render={({ field }) => (
                   <Select
                     {...field}
+                    labelId="purchase-unit-label"
                     label="Purchase Unit"
                     error={!!errors.purchaseUnitId}
                   >
-                    {units?.map((unit) => (
+                    {displayUnits.map((unit) => (
                       <MenuItem key={unit.id} value={unit.id}>
                         {unit.name}
                       </MenuItem>
@@ -247,15 +296,19 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 )}
               />
               {errors.purchaseUnitId && (
-                <Typography color="error" variant="caption">
+                <Typography
+                  color="error"
+                  variant="caption"
+                  sx={{ mt: 0.5, ml: 1.5 }}
+                >
                   {errors.purchaseUnitId.message}
                 </Typography>
               )}
             </FormControl>
           </Grid>
           <Grid item xs={12} md={4}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Sales Unit</InputLabel>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="sales-unit-label">Sales Unit</InputLabel>
               <Controller
                 name="salesUnitId"
                 control={control}
@@ -263,10 +316,11 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 render={({ field }) => (
                   <Select
                     {...field}
+                    labelId="sales-unit-label"
                     label="Sales Unit"
                     error={!!errors.salesUnitId}
                   >
-                    {units?.map((unit) => (
+                    {displayUnits.map((unit) => (
                       <MenuItem key={unit.id} value={unit.id}>
                         {unit.name}
                       </MenuItem>
@@ -275,7 +329,11 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                 )}
               />
               {errors.salesUnitId && (
-                <Typography color="error" variant="caption">
+                <Typography
+                  color="error"
+                  variant="caption"
+                  sx={{ mt: 0.5, ml: 1.5 }}
+                >
                   {errors.salesUnitId.message}
                 </Typography>
               )}
@@ -304,13 +362,16 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
 
       {/* Inventory Tab */}
       <TabPanel value={tabValue} index={1}>
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <Controller
               name="minStockLevel"
               control={control}
               rules={{
-                min: { value: 0, message: "Minimum stock cannot be negative" },
+                min: {
+                  value: 0,
+                  message: "Minimum stock cannot be negative",
+                },
               }}
               render={({ field }) => (
                 <TextField
@@ -318,7 +379,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   label="Minimum Stock Level"
                   type="number"
                   fullWidth
-                  margin="normal"
+                  variant="outlined"
                   error={!!errors.minStockLevel}
                   helperText={errors.minStockLevel?.message}
                 />
@@ -330,7 +391,10 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
               name="maxStockLevel"
               control={control}
               rules={{
-                min: { value: 0, message: "Maximum stock cannot be negative" },
+                min: {
+                  value: 0,
+                  message: "Maximum stock cannot be negative",
+                },
               }}
               render={({ field }) => (
                 <TextField
@@ -338,7 +402,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   label="Maximum Stock Level"
                   type="number"
                   fullWidth
-                  margin="normal"
+                  variant="outlined"
                   error={!!errors.maxStockLevel}
                   helperText={errors.maxStockLevel?.message}
                 />
@@ -350,7 +414,10 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
               name="reorderLevel"
               control={control}
               rules={{
-                min: { value: 0, message: "Reorder level cannot be negative" },
+                min: {
+                  value: 0,
+                  message: "Reorder level cannot be negative",
+                },
               }}
               render={({ field }) => (
                 <TextField
@@ -358,7 +425,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   label="Reorder Level"
                   type="number"
                   fullWidth
-                  margin="normal"
+                  variant="outlined"
                   error={!!errors.reorderLevel}
                   helperText={errors.reorderLevel?.message}
                 />
@@ -388,7 +455,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
 
       {/* Tax Tab */}
       <TabPanel value={tabValue} index={2}>
-        <Grid container spacing={2}>
+        <Grid container spacing={3}>
           <Grid item xs={12}>
             <Controller
               name="isTaxable"
@@ -409,7 +476,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
           </Grid>
           {isTaxable && (
             <>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <Controller
                   name="cgstRate"
                   control={control}
@@ -423,7 +490,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                       label="CGST Rate"
                       type="number"
                       fullWidth
-                      margin="normal"
+                      variant="outlined"
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">%</InputAdornment>
@@ -435,7 +502,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <Controller
                   name="sgstRate"
                   control={control}
@@ -449,7 +516,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                       label="SGST Rate"
                       type="number"
                       fullWidth
-                      margin="normal"
+                      variant="outlined"
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">%</InputAdornment>
@@ -461,7 +528,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <Controller
                   name="igstRate"
                   control={control}
@@ -475,7 +542,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                       label="IGST Rate"
                       type="number"
                       fullWidth
-                      margin="normal"
+                      variant="outlined"
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">%</InputAdornment>
@@ -487,7 +554,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <Controller
                   name="cessRate"
                   control={control}
@@ -501,7 +568,7 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
                       label="CESS Rate"
                       type="number"
                       fullWidth
-                      margin="normal"
+                      variant="outlined"
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">%</InputAdornment>
@@ -523,16 +590,22 @@ const ItemForm = ({ onSubmit, defaultValues, onCancel, categories, units }) => {
         <UnitConversionsTab
           unitConversions={unitConversions}
           onUnitConversionsChange={handleUnitConversionsChange}
-          units={units}
+          units={displayUnits}
         />
       </TabPanel>
-
-      <DialogActions sx={{ mt: 3 }}>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button type="submit" variant="contained" color="primary">
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+        <Button
+          onClick={onCancel}
+          sx={{ mr: 2 }}
+          variant="outlined"
+          size="large"
+        >
+          Cancel
+        </Button>
+        <Button type="submit" variant="contained" color="primary" size="large">
           Save
         </Button>
-      </DialogActions>
+      </Box>
     </form>
   );
 };

@@ -1,6 +1,15 @@
 // src/components/ItemMaster/UnitConversionsTab.jsx
 import React, { useState } from "react";
 import {
+  Grid,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Typography,
+  IconButton,
   Table,
   TableBody,
   TableCell,
@@ -8,258 +17,256 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
-  Typography,
+  Divider,
 } from "@mui/material";
-import { Add, Edit, Delete } from "@mui/icons-material";
-import { useForm, Controller } from "react-hook-form";
-
-const UnitConversionForm = ({
-  onSubmit,
-  onCancel,
-  defaultValues,
-  units,
-  baseUnitId,
-}) => {
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: defaultValues || {
-      fromUnitId: "",
-      toUnitId: "",
-      conversionFactor: 1,
-      isActive: true,
-    },
-  });
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Box sx={{ mt: 2 }}>
-        <FormControl fullWidth margin="normal">
-          <InputLabel>From Unit</InputLabel>
-          <Controller
-            name="fromUnitId"
-            control={control}
-            rules={{ required: "From unit is required" }}
-            render={({ field }) => (
-              <Select {...field} label="From Unit" error={!!errors.fromUnitId}>
-                {units?.map((unit) => (
-                  <MenuItem key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {errors.fromUnitId && (
-            <Typography color="error" variant="caption">
-              {errors.fromUnitId.message}
-            </Typography>
-          )}
-        </FormControl>
-
-        <FormControl fullWidth margin="normal">
-          <InputLabel>To Unit</InputLabel>
-          <Controller
-            name="toUnitId"
-            control={control}
-            rules={{ required: "To unit is required" }}
-            render={({ field }) => (
-              <Select {...field} label="To Unit" error={!!errors.toUnitId}>
-                {units?.map((unit) => (
-                  <MenuItem key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            )}
-          />
-          {errors.toUnitId && (
-            <Typography color="error" variant="caption">
-              {errors.toUnitId.message}
-            </Typography>
-          )}
-        </FormControl>
-
-        <Controller
-          name="conversionFactor"
-          control={control}
-          rules={{
-            required: "Conversion factor is required",
-            min: {
-              value: 0.000001,
-              message: "Conversion factor must be greater than zero",
-            },
-          }}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              type="number"
-              label="Conversion Factor"
-              fullWidth
-              margin="normal"
-              error={!!errors.conversionFactor}
-              helperText={errors.conversionFactor?.message}
-              inputProps={{ step: "0.000001" }}
-            />
-          )}
-        />
-      </Box>
-
-      <DialogActions sx={{ mt: 2 }}>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button type="submit" variant="contained" color="primary">
-          Save
-        </Button>
-      </DialogActions>
-    </form>
-  );
-};
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
 
 const UnitConversionsTab = ({
-  unitConversions,
+  unitConversions = [],
   onUnitConversionsChange,
-  units,
-  baseUnitId,
+  units = [],
 }) => {
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingConversion, setEditingConversion] = useState(null);
+  // Sample dummy units if none are provided
+  const displayUnits =
+    units.length > 0
+      ? units
+      : [
+          { id: "unit1", name: "Piece (Pcs)" },
+          { id: "unit2", name: "Kilogram (Kg)" },
+          { id: "unit3", name: "Liter (L)" },
+          { id: "unit4", name: "Box" },
+          { id: "unit5", name: "Meter (m)" },
+          { id: "unit6", name: "Carton" },
+        ];
+
+  const [fromUnitId, setFromUnitId] = useState("");
+  const [toUnitId, setToUnitId] = useState("");
+  const [conversionFactor, setConversionFactor] = useState(1);
+  const [error, setError] = useState("");
 
   const handleAddConversion = () => {
-    setEditingConversion(null);
-    setOpenDialog(true);
-  };
+    // Validate inputs
+    if (!fromUnitId) {
+      setError("Please select a 'From Unit'");
+      return;
+    }
+    if (!toUnitId) {
+      setError("Please select a 'To Unit'");
+      return;
+    }
+    if (fromUnitId === toUnitId) {
+      setError("From Unit and To Unit cannot be the same");
+      return;
+    }
+    if (conversionFactor <= 0) {
+      setError("Conversion factor must be greater than 0");
+      return;
+    }
 
-  const handleEditConversion = (conversion) => {
-    setEditingConversion(conversion);
-    setOpenDialog(true);
+    // Check if this conversion already exists
+    const existingConversion = unitConversions.find(
+      (uc) => uc.fromUnitId === fromUnitId && uc.toUnitId === toUnitId,
+    );
+
+    if (existingConversion) {
+      setError("This unit conversion already exists");
+      return;
+    }
+
+    // Add the new conversion
+    const newConversions = [
+      ...unitConversions,
+      {
+        id: `conv_${Date.now()}`, // Generate a temporary ID
+        fromUnitId,
+        toUnitId,
+        conversionFactor: parseFloat(conversionFactor),
+      },
+    ];
+
+    onUnitConversionsChange(newConversions);
+
+    // Reset form
+    setFromUnitId("");
+    setToUnitId("");
+    setConversionFactor(1);
+    setError("");
   };
 
   const handleDeleteConversion = (id) => {
-    const updatedConversions = unitConversions.filter((conv) => conv.id !== id);
+    const updatedConversions = unitConversions.filter((uc) => uc.id !== id);
     onUnitConversionsChange(updatedConversions);
   };
 
-  const handleSaveConversion = (data) => {
-    if (editingConversion) {
-      // Edit existing conversion
-      const updatedConversions = unitConversions.map((conv) =>
-        conv.id === editingConversion.id ? { ...conv, ...data } : conv,
-      );
-      onUnitConversionsChange(updatedConversions);
-    } else {
-      // Add new conversion
-      const newConversion = {
-        ...data,
-        id: Date.now(), // Temporary ID until saved to backend
-        isActive: true,
-      };
-      onUnitConversionsChange([...unitConversions, newConversion]);
-    }
-    setOpenDialog(false);
-  };
-
-  const getUnitNameById = (id) => {
-    const unit = units?.find((u) => u.id === id);
-    return unit ? unit.name : "Unknown Unit";
+  // Function to get unit name by ID
+  const getUnitName = (unitId) => {
+    const unit = displayUnits.find((u) => u.id === unitId);
+    return unit ? unit.name : unitId;
   };
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="flex-end" mb={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
-          onClick={handleAddConversion}
-        >
-          Add Conversion
-        </Button>
-      </Box>
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Typography variant="h6" gutterBottom>
+          Add Unit Conversion
+        </Typography>
+        <Box sx={{ mb: 3, mt: 1 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>From Unit</InputLabel>
+                <Select
+                  value={fromUnitId}
+                  onChange={(e) => setFromUnitId(e.target.value)}
+                  label="From Unit"
+                >
+                  {displayUnits.map((unit) => (
+                    <MenuItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel>To Unit</InputLabel>
+                <Select
+                  value={toUnitId}
+                  onChange={(e) => setToUnitId(e.target.value)}
+                  label="To Unit"
+                >
+                  {displayUnits.map((unit) => (
+                    <MenuItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="Conversion Factor"
+                type="number"
+                variant="outlined"
+                value={conversionFactor}
+                onChange={(e) => setConversionFactor(e.target.value)}
+                inputProps={{ min: "0.0000001", step: "0.0000001" }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={1}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleAddConversion}
+                startIcon={<AddIcon />}
+                fullWidth
+                sx={{ height: "56px" }}
+              >
+                Add
+              </Button>
+            </Grid>
+          </Grid>
+          {error && (
+            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
+        </Box>
+      </Grid>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>From Unit</TableCell>
-              <TableCell>To Unit</TableCell>
-              <TableCell align="right">Conversion Factor</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {unitConversions.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center">
-                  No unit conversions added
-                </TableCell>
-              </TableRow>
-            ) : (
-              unitConversions.map((conversion) => (
-                <TableRow key={conversion.id}>
-                  <TableCell>
-                    {conversion.fromUnitName ||
-                      getUnitNameById(conversion.fromUnitId)}
-                  </TableCell>
-                  <TableCell>
-                    {conversion.toUnitName ||
-                      getUnitNameById(conversion.toUnitId)}
-                  </TableCell>
-                  <TableCell align="right">
-                    {conversion.conversionFactor}
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      onClick={() => handleEditConversion(conversion)}
-                    >
-                      <Edit />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleDeleteConversion(conversion.id)}
-                    >
-                      <Delete />
-                    </IconButton>
-                  </TableCell>
+      <Grid item xs={12}>
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="h6" gutterBottom>
+          Unit Conversions
+        </Typography>
+
+        {unitConversions.length > 0 ? (
+          <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>From Unit</TableCell>
+                  <TableCell>To Unit</TableCell>
+                  <TableCell align="right">Conversion Factor</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </TableHead>
+              <TableBody>
+                {unitConversions.map((conversion) => (
+                  <TableRow key={conversion.id}>
+                    <TableCell>{getUnitName(conversion.fromUnitId)}</TableCell>
+                    <TableCell>{getUnitName(conversion.toUnitId)}</TableCell>
+                    <TableCell align="right">
+                      {conversion.conversionFactor}
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDeleteConversion(conversion.id)}
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+            No unit conversions added yet. Add your first conversion above.
+          </Typography>
+        )}
 
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editingConversion ? "Edit Unit Conversion" : "Add Unit Conversion"}
-        </DialogTitle>
-        <DialogContent>
-          <UnitConversionForm
-            onSubmit={handleSaveConversion}
-            onCancel={() => setOpenDialog(false)}
-            defaultValues={editingConversion}
-            units={units}
-            baseUnitId={baseUnitId}
-          />
-        </DialogContent>
-      </Dialog>
-    </Box>
+        {/* Sample data example */}
+        {unitConversions.length === 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+              Example:
+            </Typography>
+            <TableContainer component={Paper} sx={{ opacity: 0.7 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>From Unit</TableCell>
+                    <TableCell>To Unit</TableCell>
+                    <TableCell align="right">Conversion Factor</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Kilogram (Kg)</TableCell>
+                    <TableCell>Gram (g)</TableCell>
+                    <TableCell align="right">1000</TableCell>
+                    <TableCell align="center">
+                      <IconButton color="error" size="small" disabled>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Box</TableCell>
+                    <TableCell>Piece (Pcs)</TableCell>
+                    <TableCell align="right">24</TableCell>
+                    <TableCell align="center">
+                      <IconButton color="error" size="small" disabled>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+      </Grid>
+    </Grid>
   );
 };
 
