@@ -18,9 +18,9 @@ import {
   Paper,
   InputAdornment,
   IconButton,
+  Autocomplete,
 } from "@mui/material";
 import { Edit, Delete, Check, Close } from "@mui/icons-material";
-import AsyncSelect from "react-select/async";
 import { useDebouncedCallback } from "use-debounce";
 
 // Dummy items data
@@ -208,26 +208,8 @@ export default function CreateCounterSales() {
     debouncedUpdate();
   }, [items, roundOffAmount, debouncedUpdate]);
 
-  // Async load items for add
-  const loadItems = (inputValue) => {
-    return new Promise((resolve) => {
-      const filtered = dummyItems
-        .filter(
-          (item) =>
-            item.name.toLowerCase().includes(inputValue.toLowerCase()) ||
-            item.code.toLowerCase().includes(inputValue.toLowerCase()),
-        )
-        .map((item) => ({
-          value: item.id,
-          label: `${item.code} - ${item.name}`,
-          data: item,
-        }));
-      resolve(filtered);
-    });
-  };
-
   // Handle item selection for add
-  const handleItemChange = (selected) => {
+  const handleItemChange = (event, selected) => {
     if (selected) {
       const itemData = selected.data;
       setNewItem({
@@ -434,10 +416,13 @@ export default function CreateCounterSales() {
             {/* Add Item Row */}
             <TableRow sx={{ backgroundColor: "#f0f0f0" }}>
               <TableCell>
-                <AsyncSelect
-                  cacheOptions
-                  defaultOptions
-                  loadOptions={loadItems}
+                <Autocomplete
+                  options={dummyItems.map((item) => ({
+                    value: item.id,
+                    label: `${item.code} - ${item.name}`,
+                    data: item,
+                  }))}
+                  getOptionLabel={(option) => option.label}
                   onChange={handleItemChange}
                   value={
                     newItem.itemId
@@ -447,18 +432,25 @@ export default function CreateCounterSales() {
                         }
                       : null
                   }
-                  placeholder="Select item..."
-                  styles={{
-                    menu: (base) => ({ ...base, zIndex: 9999 }),
-                    control: (base) => ({
-                      ...base,
-                      fontSize: "14px",
-                      borderColor: "#ccc",
-                    }),
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Select item..."
+                      size="small"
+                      variant="outlined"
+                      sx={{ backgroundColor: "#fff" }}
+                      inputRef={(el) => (inputRefs.current[3] = el)}
+                      onKeyDown={(e) => handleKeyDown(e, 3)}
+                    />
+                  )}
+                  sx={{
+                    ".MuiOutlinedInput-root": {
+                      padding: "4px",
+                    },
+                    ".MuiAutocomplete-input": {
+                      padding: "0px",
+                    },
                   }}
-                  isClearable
-                  ref={(el) => (inputRefs.current[3] = el?.inputRef)}
-                  onKeyDown={(e) => handleKeyDown(e, 3)}
                 />
               </TableCell>
               <TableCell align="right">
