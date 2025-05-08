@@ -15,7 +15,10 @@ import { Edit, Delete } from "@mui/icons-material";
 
 const ItemTable = ({ items, onEditItem, onDeleteItem }) => {
   return (
-    <TableContainer component={Paper} sx={{ mt: 3 }}>
+    <TableContainer
+      component={Paper}
+      sx={{ mt: 3, border: "none", boxShadow: "none" }}
+    >
       <Table>
         <TableHead>
           <TableRow>
@@ -25,7 +28,7 @@ const ItemTable = ({ items, onEditItem, onDeleteItem }) => {
             <TableCell align="right">SGST (%)</TableCell>
             <TableCell align="right">IGST (%)</TableCell>
             <TableCell align="right">CESS (%)</TableCell>
-            <TableCell align="center">Actions</TableCell>
+            {/* <TableCell align="center">Actions</TableCell> */}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -37,18 +40,18 @@ const ItemTable = ({ items, onEditItem, onDeleteItem }) => {
               <TableCell align="right">{item.sgstRate}</TableCell>
               <TableCell align="right">{item.igstRate}</TableCell>
               <TableCell align="right">{item.cessRate}</TableCell>
-              <TableCell align="center">
-                <Tooltip title="Edit">
-                  <IconButton onClick={() => onEditItem(item)}>
-                    <Edit />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Delete">
-                  <IconButton onClick={() => onDeleteItem(item.id)}>
-                    <Delete />
-                  </IconButton>
-                </Tooltip>
-              </TableCell>
+              {/* <TableCell align="center"> */}
+              {/*   <Tooltip title="Edit"> */}
+              {/*     <IconButton onClick={() => onEditItem(item)}> */}
+              {/*       <Edit /> */}
+              {/*     </IconButton> */}
+              {/*   </Tooltip> */}
+              {/*   <Tooltip title="Delete"> */}
+              {/*     <IconButton onClick={() => onDeleteItem(item.id)}> */}
+              {/*       <Delete /> */}
+              {/*     </IconButton> */}
+              {/*   </Tooltip> */}
+              {/* </TableCell> */}
             </TableRow>
           ))}
         </TableBody>

@@ -7,11 +7,12 @@ export default {
   // ========================= DASHBOARD APIS =========================
   getDashboardData: "/api/Admin/Reports/GetDashboardDisplayData",
 
+  // ========================= ITEM MASTER APIS =========================
+  createItem: "/api/inventory/items",
+  getItems: "/api/inventory/items",
+
   // ========================= COUNTERSALES APIS =========================
   createCounterSales: "/api/Admin/Reports/GetDashboardDisplayData",
   getItemPriceDetails: ({ priceListId, itemId }) =>
     `/price-list/${priceListId}/item/${itemId}/v2`,
-
-  // ========================= COUNTERSALES APIS =========================
-  getProducts: "/api/inventory/items",
 };

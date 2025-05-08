@@ -12,14 +12,14 @@ import { Add, Search } from "@mui/icons-material";
 import ItemTable from "./components/ItemMaster/ItemTable";
 import AddItemModal from "./components/ItemMaster/AddItemModal";
 import EditItemModal from "./components/ItemMaster/EditItemModal";
-import { useQuery } from "@tanstack/react-query";
-import { GetProductsAPI } from "@/services/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { CreateItemAPI, GetItemsAPI } from "@/services/api";
 
 const ItemMasterPage = () => {
   // Dummy items data (would come from API in a real application)
   const { data, isLoading } = useQuery({
     queryKey: ["GetProductsAPI"],
-    queryFn: () => GetProductsAPI(),
+    queryFn: () => GetItemsAPI(),
   });
   const items = data?.data?.content || [];
   // const [items, setItems] = useState([
@@ -67,12 +67,19 @@ const ItemMasterPage = () => {
       item.code.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  const addMutation = useMutation({
+    mutationFn: CreateItemAPI,
+    onSuccess: () => {},
+    onError: ({ response }) => {},
+  });
   // Handler for adding a new item
   const handleAddItem = (itemData) => {
     const newItem = {
       ...itemData,
-      id: items.length > 0 ? Math.max(...items.map((item) => item.id)) + 1 : 1,
+      // id: items.length > 0 ? Math.max(...items.map((item) => item.id)) + 1 : 1,
     };
+    // console.log("newItem", newItem);
+    addMutation.mutate(newItem);
     // setItems([...items, newItem]);
   };
 

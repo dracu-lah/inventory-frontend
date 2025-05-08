@@ -47,9 +47,17 @@ export const CreateCounterSalesAPI = async (loginData) => {
 /************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* ITEM MASTER  START */
 
-export const GetProductsAPI = async (params) => {
+export const CreateItemAPI = async (loginData) => {
   try {
-    const { data } = await api.get(`${endPoint.getProducts}`, {
+    const { data } = await api.post(`${endPoint.createItem}`, loginData);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+export const GetItemsAPI = async (params) => {
+  try {
+    const { data } = await api.get(`${endPoint.getItems}`, {
       params: params,
     });
     return data;
