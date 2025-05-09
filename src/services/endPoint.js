@@ -11,6 +11,11 @@ export default {
   createItem: "/api/inventory/items",
   getItems: "/api/inventory/items",
 
+  // ========================= CATEGORIES APIS =========================
+  getCategories: "/api/inventory/categories",
+
+  // ========================= UNITS APIS =========================
+  getUnits: "/api/inventory/units",
   // ========================= COUNTERSALES APIS =========================
   createCounterSales: "/api/Admin/Reports/GetDashboardDisplayData",
   getItemPriceDetails: ({ priceListId, itemId }) =>
