@@ -69,6 +69,19 @@ export const CreateCounterSalesAPI = async (loginData) => {
     throw error;
   }
 };
+export const GetItemPriceListDetailAPI = async (params) => {
+  try {
+    const { data } = await api.get(
+      `${endPoint.getItemPriceDetail({ priceListId: 1, itemId: params.itemId })}`,
+      {
+        params: params,
+      },
+    );
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
 /* COUNTERSALES  END */
 /************************************************************************************************************************************************************************************************************************************************************************************************************************/
 /* ITEM MASTER  START */

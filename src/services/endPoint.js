@@ -18,6 +18,7 @@ export default {
   getUnits: "/api/inventory/units",
   // ========================= COUNTERSALES APIS =========================
   createCounterSales: "/api/Admin/Reports/GetDashboardDisplayData",
-  getItemPriceDetails: ({ priceListId, itemId }) =>
+  // ========================= PRICELIST APIS =========================
+  getItemPriceDetail: ({ priceListId, itemId }) =>
     `/price-list/${priceListId}/item/${itemId}/v2`,
 };
