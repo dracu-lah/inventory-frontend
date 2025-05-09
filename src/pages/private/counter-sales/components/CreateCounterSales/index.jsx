@@ -23,41 +23,7 @@ import {
 import { Edit, Delete, Check, Close } from "@mui/icons-material";
 import { useDebouncedCallback } from "use-debounce";
 import { useQuery } from "@tanstack/react-query";
-import { GetItemsAPI } from "@/services/api";
-
-// Dummy items data
-// const dummyItems = [
-//   {
-//     id: 1,
-//     code: "ITEM001",
-//     name: "Laptop",
-//     cgst: 9,
-//     sgst: 9,
-//     igst: 0,
-//     cess: 0,
-//     price: 50000,
-//   },
-//   {
-//     id: 2,
-//     code: "ITEM002",
-//     name: "Mouse",
-//     cgst: 9,
-//     sgst: 9,
-//     igst: 0,
-//     cess: 0,
-//     price: 500,
-//   },
-//   {
-//     id: 3,
-//     code: "ITEM003",
-//     name: "Keyboard",
-//     cgst: 9,
-//     sgst: 9,
-//     igst: 0,
-//     cess: 0,
-//     price: 1500,
-//   },
-// ];
+import { GetItemsAPI, GetItemPriceListDetailAPI } from "@/services/api"; // Assuming you have GetItemPriceListDetailAPI
 
 // Schemas
 const itemSchema = z.object({
@@ -110,10 +76,15 @@ export default function CreateCounterSales() {
     queryFn: () => GetItemsAPI(),
   });
 
-  const { data: itemPriceListDetailData, isLoading: isLoading } = useQuery({
-    queryKey: ["GetItemPriceListDetailAPI", itemId],
-    queryFn: () => GetItemPriceListDetailAPI({ itemId }),
-  });
+  const [selectedItemId, setSelectedItemId] = useState(null);
+
+  const { data: itemPriceListDetailData, isLoading: isLoadingPriceDetail } =
+    useQuery({
+      queryKey: ["GetItemPriceListDetailAPI", selectedItemId],
+      queryFn: () => GetItemPriceListDetailAPI({ itemId: selectedItemId }),
+      enabled: !!selectedItemId, // Only run the query if an item is selected
+    });
+
   const dummyItems = itemsData?.data?.content || [];
   const {
     control,
@@ -148,6 +119,27 @@ export default function CreateCounterSales() {
   const [newItem, setNewItem] = useState(defaultItemValues);
   const inputRefs = useRef([]);
 
+  // Update newItem state when itemPriceListDetailData is fetched
+  useEffect(() => {
+    if (itemPriceListDetailData?.data) {
+      const priceDetail = itemPriceListDetailData.data;
+      const itemMaster = priceDetail.itemMasterDetails;
+      setNewItem({
+        ...newItem,
+        itemId: priceDetail.itemId,
+        itemCode: itemMaster.code,
+        itemName: itemMaster.name,
+        unitPrice: priceDetail.sellingPrice || itemMaster.price || 0, // Use sellingPrice if available, otherwise fall back to itemMaster.price (assuming itemMaster also has a price field)
+        cgstRate: itemMaster.cgstRate || 0,
+        sgstRate: itemMaster.sgstRate || 0,
+        igstRate: itemMaster.igstRate || 0,
+        cessRate: itemMaster.cessRate || 0,
+        discountValue: priceDetail.discountPercentage || 0, // Use discountPercentage
+        discountType: "PERCENTAGE", // Assuming discountPercentage means percentage discount
+      });
+    }
+  }, [itemPriceListDetailData]);
+
   // Calculate totals for each item with proper tax calculation
   const calculateItemTotals = (item) => {
     const lineTotal = item.quantity * item.unitPrice;
@@ -156,10 +148,14 @@ export default function CreateCounterSales() {
         ? (lineTotal * item.discountValue) / 100
         : item.discountValue;
 
-    // Apply the formula: (discounted amount * 100) / (100 + CGST% + SGST%)
+    // Apply the formula: (discounted amount * 100) / (100 + CGST% + SGST% + IGST% + CESS%)
     const discountedAmount = Math.max(lineTotal - discount, 0);
+    const totalTaxRate =
+      item.cgstRate + item.sgstRate + item.igstRate + item.cessRate;
     const taxableAmount =
-      (discountedAmount * 100) / (100 + item.cgstRate + item.sgstRate);
+      totalTaxRate === 0
+        ? discountedAmount
+        : (discountedAmount * 100) / (100 + totalTaxRate);
 
     // Calculate taxes based on the taxable amount
     const cgst = (taxableAmount * item.cgstRate) / 100;
@@ -223,19 +219,9 @@ export default function CreateCounterSales() {
   // Handle item selection for add
   const handleItemChange = (event, selected) => {
     if (selected) {
-      const itemData = selected.data;
-      setNewItem({
-        ...newItem,
-        itemId: itemData.id,
-        itemCode: itemData.code,
-        itemName: itemData.name,
-        unitPrice: itemData.price,
-        cgstRate: itemData.cgst,
-        sgstRate: itemData.sgst,
-        igstRate: itemData.igst,
-        cessRate: itemData.cess,
-      });
+      setSelectedItemId(selected.value);
     } else {
+      setSelectedItemId(null);
       setNewItem({
         ...defaultItemValues,
         quantity: newItem.quantity,
@@ -250,6 +236,7 @@ export default function CreateCounterSales() {
     if (newItem.itemId === 0) return;
     append(newItem);
     setNewItem(defaultItemValues);
+    setSelectedItemId(null); // Reset selected item ID after adding
     inputRefs.current[3]?.focus();
   };
 
@@ -432,16 +419,17 @@ export default function CreateCounterSales() {
                   options={dummyItems.map((item) => ({
                     value: item.id,
                     label: `${item.code} - ${item.name}`,
-                    data: item,
                   }))}
                   getOptionLabel={(option) => option.label}
                   onChange={handleItemChange}
                   value={
-                    newItem.itemId
-                      ? {
-                          value: newItem.itemId,
-                          label: `${newItem.itemCode} - ${newItem.itemName}`,
-                        }
+                    selectedItemId
+                      ? dummyItems
+                          .map((item) => ({
+                            value: item.id,
+                            label: `${item.code} - ${item.name}`,
+                          }))
+                          .find((option) => option.value === selectedItemId)
                       : null
                   }
                   renderInput={(params) => (
@@ -453,6 +441,16 @@ export default function CreateCounterSales() {
                       sx={{ backgroundColor: "#fff" }}
                       inputRef={(el) => (inputRefs.current[3] = el)}
                       onKeyDown={(e) => handleKeyDown(e, 3)}
+                      // Indicate loading state for item price details
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {isLoadingPriceDetail ? "Loading..." : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
                     />
                   )}
                   sx={{
@@ -463,6 +461,7 @@ export default function CreateCounterSales() {
                       padding: "0px",
                     },
                   }}
+                  disabled={isLoadingItems} // Disable if items are loading
                 />
               </TableCell>
               <TableCell align="right">
@@ -557,16 +556,28 @@ export default function CreateCounterSales() {
                   </Grid>
                 </Grid>
               </TableCell>
-              <TableCell align="right">-</TableCell>
-              <TableCell align="right">-</TableCell>
-              <TableCell align="right">-</TableCell>
-              <TableCell align="right">-</TableCell>
+              <TableCell align="right">
+                {calculateItemTotals(newItem).taxableAmount.toFixed(2)}
+              </TableCell>
+              <TableCell align="right">
+                {calculateItemTotals(newItem).cgst.toFixed(2)}
+              </TableCell>
+              <TableCell align="right">
+                {calculateItemTotals(newItem).sgst.toFixed(2)}
+              </TableCell>
+              <TableCell align="right">
+                {(
+                  calculateItemTotals(newItem).taxableAmount +
+                  calculateItemTotals(newItem).cgst +
+                  calculateItemTotals(newItem).sgst
+                ).toFixed(2)}
+              </TableCell>
               <TableCell align="center">
                 <Button
                   size="small"
                   variant="contained"
                   onClick={handleAddItem}
-                  disabled={newItem.itemId === 0}
+                  disabled={newItem.itemId === 0 || isLoadingPriceDetail} // Disable if no item selected or price detail is loading
                   sx={{
                     backgroundColor: "#1976d2",
                     "&:hover": { backgroundColor: "#115293" },
