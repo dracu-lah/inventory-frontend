@@ -22,40 +22,42 @@ import {
 } from "@mui/material";
 import { Edit, Delete, Check, Close } from "@mui/icons-material";
 import { useDebouncedCallback } from "use-debounce";
+import { useQuery } from "@tanstack/react-query";
+import { GetItemsAPI } from "@/services/api";
 
 // Dummy items data
-const dummyItems = [
-  {
-    id: 1,
-    code: "ITEM001",
-    name: "Laptop",
-    cgst: 9,
-    sgst: 9,
-    igst: 0,
-    cess: 0,
-    price: 50000,
-  },
-  {
-    id: 2,
-    code: "ITEM002",
-    name: "Mouse",
-    cgst: 9,
-    sgst: 9,
-    igst: 0,
-    cess: 0,
-    price: 500,
-  },
-  {
-    id: 3,
-    code: "ITEM003",
-    name: "Keyboard",
-    cgst: 9,
-    sgst: 9,
-    igst: 0,
-    cess: 0,
-    price: 1500,
-  },
-];
+// const dummyItems = [
+//   {
+//     id: 1,
+//     code: "ITEM001",
+//     name: "Laptop",
+//     cgst: 9,
+//     sgst: 9,
+//     igst: 0,
+//     cess: 0,
+//     price: 50000,
+//   },
+//   {
+//     id: 2,
+//     code: "ITEM002",
+//     name: "Mouse",
+//     cgst: 9,
+//     sgst: 9,
+//     igst: 0,
+//     cess: 0,
+//     price: 500,
+//   },
+//   {
+//     id: 3,
+//     code: "ITEM003",
+//     name: "Keyboard",
+//     cgst: 9,
+//     sgst: 9,
+//     igst: 0,
+//     cess: 0,
+//     price: 1500,
+//   },
+// ];
 
 // Schemas
 const itemSchema = z.object({
@@ -103,6 +105,11 @@ const defaultValues = {
 };
 
 export default function CreateCounterSales() {
+  const { data: itemsData, isLoading: isLoadingItems } = useQuery({
+    queryKey: ["GetItemsAPI"],
+    queryFn: () => GetItemsAPI(),
+  });
+  const dummyItems = itemsData?.data?.content || [];
   const {
     control,
     handleSubmit,
