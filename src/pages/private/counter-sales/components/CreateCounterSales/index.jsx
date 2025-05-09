@@ -281,7 +281,7 @@ export default function CreateCounterSales() {
           paddingBottom: "4px",
         }}
       >
-        Counter Sale Voucher
+        Counter Sale
       </Typography>
 
       {/* Customer Details */}
@@ -366,7 +366,7 @@ export default function CreateCounterSales() {
                 align="right"
                 sx={{ minWidth: "80px", fontWeight: "bold", color: "#333" }}
               >
-                Price (₹)
+                Rate (₹)
               </TableCell>
               <TableCell
                 align="right"
@@ -743,7 +743,7 @@ export default function CreateCounterSales() {
           </Typography>
         </Grid>
         <Grid item xs={6}>
-          <Typography sx={{ color: "#333" }}>Taxable Amount:</Typography>
+          <Typography sx={{ color: "#333" }}>Taxable Value:</Typography>
         </Grid>
         <Grid item xs={6} sx={{ textAlign: "right" }}>
           <Typography sx={{ color: "#333" }}>
@@ -844,7 +844,7 @@ export default function CreateCounterSales() {
             "&:hover": { backgroundColor: "#115293" },
           }}
         >
-          Save Voucher
+          Save
         </Button>
       </Box>
     </Box>
