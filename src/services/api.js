@@ -73,9 +73,6 @@ export const GetItemPriceListDetailAPI = async (params) => {
   try {
     const { data } = await api.get(
       `${endPoint.getItemPriceDetail({ priceListId: 1, itemId: params.itemId })}`,
-      {
-        params: params,
-      },
     );
     return data;
   } catch (error) {
