@@ -109,6 +109,11 @@ export default function CreateCounterSales() {
     queryKey: ["GetItemsAPI"],
     queryFn: () => GetItemsAPI(),
   });
+
+  const { data: itemPriceListDetailData, isLoading: isLoading } = useQuery({
+    queryKey: ["GetItemPriceListDetailAPI", itemId],
+    queryFn: () => GetItemPriceListDetailAPI({ itemId }),
+  });
   const dummyItems = itemsData?.data?.content || [];
   const {
     control,
